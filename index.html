@@ -277,7 +277,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v1.3 · Orquesta Matriarca</div>
+      <div class="app-version">v1.4 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -466,48 +466,108 @@ const SEED=[
  {alias:"GABRIEL",nombre:"Gabriel",banco:"Bancolombia",cuenta:"91265113767",ordinaria:135000,finde:170000,formatos:[]},
 ];
 const COL_M="musicos", COL_W="semanas";
+const LS_M="matriarca_musicos_v1", LS_W="matriarca_semanas_v1";
 let data = [];
 let weeks = {};
 let editId=null;
 let curMonday = mondayOf(new Date());
 let selDay = 0;
+let firestoreOK = false;
 
 const withFormatos = arr => arr.map(m=>({formatos:[],...m}));
 
-/* Cargar músicos desde la base de datos (y sembrar los 19 la primera vez) */
+/* ── helpers localStorage ── */
+function lsGetM(){ try{const r=localStorage.getItem(LS_M);return r?JSON.parse(r):null;}catch(e){return null;} }
+function lsSaveM(){ try{localStorage.setItem(LS_M,JSON.stringify(data));}catch(e){} }
+function lsGetW(){ try{const r=localStorage.getItem(LS_W);return r?JSON.parse(r):{} ;}catch(e){return {};} }
+function lsSaveW(){ try{localStorage.setItem(LS_W,JSON.stringify(weeks));}catch(e){} }
+
+/* ── carga ── */
 async function loadM(){
-  const snap = await db.collection(COL_M).get();
-  if(snap.empty){
-    const seeded = SEED.map((m,i)=>({id:i+1,...m}));
-    const batch = db.batch();
-    seeded.forEach(m=>batch.set(db.collection(COL_M).doc(String(m.id)), m));
-    await batch.commit();
-    return withFormatos(seeded);
-  }
-  return withFormatos(snap.docs.map(d=>d.data()));
+  /* 1. Intentar Firestore */
+  try{
+    const snap = await Promise.race([
+      db.collection(COL_M).get(),
+      new Promise((_,r)=>setTimeout(()=>r(new Error("timeout")),5000))
+    ]);
+    firestoreOK = true;
+    if(snap.empty){
+      /* primera vez: sembrar los 19 */
+      const seeded = SEED.map((m,i)=>({id:i+1,...m}));
+      const batch = db.batch();
+      seeded.forEach(m=>batch.set(db.collection(COL_M).doc(String(m.id)),m));
+      await batch.commit();
+      lsSaveM();
+      return withFormatos(seeded);
+    }
+    const arr = withFormatos(snap.docs.map(d=>d.data()));
+    localStorage.setItem(LS_M, JSON.stringify(arr));
+    return arr;
+  }catch(e){ firestoreOK=false; }
+
+  /* 2. Caída a localStorage */
+  const local = lsGetM();
+  if(local && local.length) return withFormatos(local);
+
+  /* 3. Caída a SEED */
+  return withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
 }
-/* Cargar las semanas guardadas */
+
 async function loadW(){
-  const snap = await db.collection(COL_W).get();
-  const w={};
-  snap.docs.forEach(d=>{ w[d.id]=d.data(); });
-  return w;
+  try{
+    if(firestoreOK){
+      const snap = await db.collection(COL_W).get();
+      const w={};
+      snap.docs.forEach(d=>{ w[d.id]=d.data(); });
+      localStorage.setItem(LS_W, JSON.stringify(w));
+      return w;
+    }
+  }catch(e){}
+  return lsGetW();
 }
-/* Guardar UN músico en la nube (retorna promesa) */
-function saveMusicoDoc(m){
-  return db.collection(COL_M).doc(String(m.id)).set(m);
+
+/* ── guardar músico (local SIEMPRE + Firestore si posible) ── */
+async function saveMusicoDoc(m){
+  /* siempre local primero */
+  lsSaveM();
+  /* intentar Firestore */
+  try{
+    await Promise.race([
+      db.collection(COL_M).doc(String(m.id)).set(m),
+      new Promise((_,r)=>setTimeout(()=>r(new Error("timeout")),6000))
+    ]);
+    firestoreOK=true;
+    return true;
+  }catch(e){
+    firestoreOK=false;
+    return false;
+  }
 }
-/* Guardar todos los músicos (usado solo en importData) */
+
+/* ── persistM (importación masiva) ── */
 function persistM(){
+  lsSaveM();
+  if(!firestoreOK) return;
   const batch = db.batch();
-  data.forEach(m=>batch.set(db.collection(COL_M).doc(String(m.id)), m));
-  batch.commit().catch(()=>toast("Sin conexión: no se guardó en la nube"));
+  data.forEach(m=>batch.set(db.collection(COL_M).doc(String(m.id)),m));
+  batch.commit().catch(()=>{});
 }
-/* Borrar un músico de la nube */
+
+/* ── borrar músico ── */
 function deleteMusicoDoc(id){
-  db.collection(COL_M).doc(String(id)).delete().catch(()=>toast("Sin conexión: no se borró en la nube"));
+  lsSaveM();
+  if(firestoreOK) db.collection(COL_M).doc(String(id)).delete().catch(()=>{});
 }
-/* Guardar la semana actual en la nube */
+
+/* ── guardar semana ── */
+function persistW(){
+  lsSaveW();
+  if(!firestoreOK) return;
+  const k=keyOf(curMonday);
+  if(weeks[k]) db.collection(COL_W).doc(k).set(weeks[k]).catch(()=>{});
+}
+
+function nextId(){ return data.reduce((m,x)=>Math.max(m,x.id),0)+1; }
 function persistW(){
   const k=keyOf(curMonday);
   if(weeks[k]) db.collection(COL_W).doc(k).set(weeks[k]).catch(()=>toast("Sin conexión: no se guardó la semana"));
@@ -578,19 +638,18 @@ async function save(){
   try{
     if(editId){
       const updated={...data.find(x=>x.id===editId),...rec};
-      await saveMusicoDoc(updated);
       data=data.map(x=>x.id===editId?updated:x);
-      toast("✅ Músico guardado correctamente");
+      const enNube = await saveMusicoDoc(updated);
+      toast(enNube?"✅ Guardado en la nube":"💾 Guardado en este dispositivo");
     } else {
       const nuevo={id:nextId(),...rec};
-      await saveMusicoDoc(nuevo);
       data.push(nuevo);
-      toast("✅ Músico agregado correctamente");
+      const enNube = await saveMusicoDoc(nuevo);
+      toast(enNube?"✅ Músico agregado en la nube":"💾 Músico guardado en este dispositivo");
     }
     renderM(); closeModal();
   } catch(err){
-    el("formErr").textContent="❌ Error al guardar. Revisa tu conexión e intenta de nuevo.";
-    console.error("Firestore save error:", err);
+    el("formErr").textContent="❌ Error inesperado. Intenta de nuevo.";
   } finally {
     btn.disabled=false; btn.textContent="Guardar músico";
   }
