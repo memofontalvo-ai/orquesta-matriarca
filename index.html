@@ -277,7 +277,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v1.4 · Orquesta Matriarca</div>
+      <div class="app-version">v1.5 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -437,8 +437,12 @@
     messagingSenderId: "259864283569",
     appId: "1:259864283569:web:3c82edbceefa320d839590"
   };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+  try {
+    firebase.initializeApp(firebaseConfig);
+    window.db = firebase.firestore();
+  } catch(e) {
+    window.db = null;
+  }
 </script>
 <script>
 const FORMATOS=["Orquesta pequeña","Orquesta grande","Quinteto","Vallenato","Música popular"];
@@ -472,99 +476,95 @@ let weeks = {};
 let editId=null;
 let curMonday = mondayOf(new Date());
 let selDay = 0;
-let firestoreOK = false;
 
 const withFormatos = arr => arr.map(m=>({formatos:[],...m}));
 
-/* ── helpers localStorage ── */
-function lsGetM(){ try{const r=localStorage.getItem(LS_M);return r?JSON.parse(r):null;}catch(e){return null;} }
-function lsSaveM(){ try{localStorage.setItem(LS_M,JSON.stringify(data));}catch(e){} }
-function lsGetW(){ try{const r=localStorage.getItem(LS_W);return r?JSON.parse(r):{} ;}catch(e){return {};} }
-function lsSaveW(){ try{localStorage.setItem(LS_W,JSON.stringify(weeks));}catch(e){} }
+/* ── localStorage helpers ── */
+function lsGetM(){ try{ const r=localStorage.getItem(LS_M); return r?JSON.parse(r):null; }catch(e){ return null; } }
+function lsSaveM(){ try{ localStorage.setItem(LS_M,JSON.stringify(data)); }catch(e){} }
+function lsGetW(){ try{ const r=localStorage.getItem(LS_W); return r?JSON.parse(r):{}; }catch(e){ return {}; } }
+function lsSaveW(){ try{ localStorage.setItem(LS_W,JSON.stringify(weeks)); }catch(e){} }
 
-/* ── carga ── */
+/* ── sincronizar UN músico a Firestore en segundo plano ── */
+function fsSync(m){
+  if(!window.db) return;
+  try{ window.db.collection(COL_M).doc(String(m.id)).set(m).catch(()=>{}); }catch(e){}
+}
+function fsDelete(id){
+  if(!window.db) return;
+  try{ window.db.collection(COL_M).doc(String(id)).delete().catch(()=>{}); }catch(e){}
+}
+function fsSyncWeek(k,w){
+  if(!window.db) return;
+  try{ window.db.collection(COL_W).doc(k).set(w).catch(()=>{}); }catch(e){}
+}
+
+/* ── cargar datos (Firestore → localStorage → SEED) ── */
 async function loadM(){
-  /* 1. Intentar Firestore */
-  try{
-    const snap = await Promise.race([
-      db.collection(COL_M).get(),
-      new Promise((_,r)=>setTimeout(()=>r(new Error("timeout")),5000))
-    ]);
-    firestoreOK = true;
-    if(snap.empty){
-      /* primera vez: sembrar los 19 */
-      const seeded = SEED.map((m,i)=>({id:i+1,...m}));
-      const batch = db.batch();
-      seeded.forEach(m=>batch.set(db.collection(COL_M).doc(String(m.id)),m));
-      await batch.commit();
-      lsSaveM();
-      return withFormatos(seeded);
-    }
-    const arr = withFormatos(snap.docs.map(d=>d.data()));
-    localStorage.setItem(LS_M, JSON.stringify(arr));
-    return arr;
-  }catch(e){ firestoreOK=false; }
-
-  /* 2. Caída a localStorage */
+  if(window.db){
+    try{
+      const snap = await Promise.race([
+        window.db.collection(COL_M).get(),
+        new Promise((_,r)=>setTimeout(()=>r('timeout'),5000))
+      ]);
+      if(!snap.empty){
+        const arr = withFormatos(snap.docs.map(d=>d.data()));
+        localStorage.setItem(LS_M, JSON.stringify(arr));
+        return arr;
+      }
+      /* primera vez: sembrar */
+      const seeded = withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
+      const batch = window.db.batch();
+      seeded.forEach(m=>batch.set(window.db.collection(COL_M).doc(String(m.id)),m));
+      await batch.commit().catch(()=>{});
+      localStorage.setItem(LS_M, JSON.stringify(seeded));
+      return seeded;
+    }catch(e){}
+  }
   const local = lsGetM();
   if(local && local.length) return withFormatos(local);
-
-  /* 3. Caída a SEED */
   return withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
 }
 
 async function loadW(){
-  try{
-    if(firestoreOK){
-      const snap = await db.collection(COL_W).get();
+  if(window.db){
+    try{
+      const snap = await Promise.race([
+        window.db.collection(COL_W).get(),
+        new Promise((_,r)=>setTimeout(()=>r('timeout'),5000))
+      ]);
       const w={};
       snap.docs.forEach(d=>{ w[d.id]=d.data(); });
       localStorage.setItem(LS_W, JSON.stringify(w));
       return w;
-    }
-  }catch(e){}
-  return lsGetW();
-}
-
-/* ── guardar músico (local SIEMPRE + Firestore si posible) ── */
-async function saveMusicoDoc(m){
-  /* siempre local primero */
-  lsSaveM();
-  /* intentar Firestore */
-  try{
-    await Promise.race([
-      db.collection(COL_M).doc(String(m.id)).set(m),
-      new Promise((_,r)=>setTimeout(()=>r(new Error("timeout")),6000))
-    ]);
-    firestoreOK=true;
-    return true;
-  }catch(e){
-    firestoreOK=false;
-    return false;
+    }catch(e){}
   }
-}
-
-/* ── persistM (importación masiva) ── */
-function persistM(){
-  lsSaveM();
-  if(!firestoreOK) return;
-  const batch = db.batch();
-  data.forEach(m=>batch.set(db.collection(COL_M).doc(String(m.id)),m));
-  batch.commit().catch(()=>{});
-}
-
-/* ── borrar músico ── */
-function deleteMusicoDoc(id){
-  lsSaveM();
-  if(firestoreOK) db.collection(COL_M).doc(String(id)).delete().catch(()=>{});
+  return lsGetW();
 }
 
 /* ── guardar semana ── */
 function persistW(){
   lsSaveW();
-  if(!firestoreOK) return;
   const k=keyOf(curMonday);
-  if(weeks[k]) db.collection(COL_W).doc(k).set(weeks[k]).catch(()=>{});
+  if(weeks[k]) fsSyncWeek(k, weeks[k]);
+}
+
+/* ── eliminar músico ── */
+function deleteMusicoDoc(id){
+  data = data.filter(x=>x.id!==id);
+  lsSaveM();
+  fsDelete(id);
+}
+
+/* ── importación masiva ── */
+function persistM(){
+  lsSaveM();
+  if(!window.db) return;
+  try{
+    const batch = window.db.batch();
+    data.forEach(m=>batch.set(window.db.collection(COL_M).doc(String(m.id)),m));
+    batch.commit().catch(()=>{});
+  }catch(e){}
 }
 
 function nextId(){ return data.reduce((m,x)=>Math.max(m,x.id),0)+1; }
@@ -629,32 +629,34 @@ function renderFmtPicker(){
 function toggleFmtOpt(i){ const f=FORMATOS[i]; if(formSel.has(f))formSel.delete(f); else formSel.add(f); renderFmtPicker(); }
 function setForm(m){el("fAlias").value=m.alias||"";el("fNombre").value=m.nombre||"";el("fBanco").value=m.banco||"";el("fCuenta").value=m.cuenta||"";el("fOrd").value=m.ordinaria!=null?Number(m.ordinaria).toLocaleString("es-CO"):"";el("fFin").value=m.finde!=null?Number(m.finde).toLocaleString("es-CO"):"";el("formErr").textContent="";formSel=new Set(m.formatos||[]);renderFmtPicker();}
 function closeModal(){el("overlay").classList.remove("open");}
-async function save(){
+function save(){
   const alias=el("fAlias").value.trim();
   if(!alias){el("formErr").textContent="El alias es obligatorio.";el("fAlias").focus();return;}
-  const rec={alias,nombre:el("fNombre").value.trim(),banco:el("fBanco").value.trim(),cuenta:el("fCuenta").value.trim(),ordinaria:cleanNum(el("fOrd").value),finde:cleanNum(el("fFin").value),formatos:[...formSel]};
-  const btn=el("btnSave");
-  btn.disabled=true; btn.textContent="Guardando…";
-  try{
-    if(editId){
-      const updated={...data.find(x=>x.id===editId),...rec};
-      data=data.map(x=>x.id===editId?updated:x);
-      const enNube = await saveMusicoDoc(updated);
-      toast(enNube?"✅ Guardado en la nube":"💾 Guardado en este dispositivo");
-    } else {
-      const nuevo={id:nextId(),...rec};
-      data.push(nuevo);
-      const enNube = await saveMusicoDoc(nuevo);
-      toast(enNube?"✅ Músico agregado en la nube":"💾 Músico guardado en este dispositivo");
-    }
-    renderM(); closeModal();
-  } catch(err){
-    el("formErr").textContent="❌ Error inesperado. Intenta de nuevo.";
-  } finally {
-    btn.disabled=false; btn.textContent="Guardar músico";
+  const rec={
+    alias,
+    nombre:el("fNombre").value.trim(),
+    banco:el("fBanco").value.trim(),
+    cuenta:el("fCuenta").value.trim(),
+    ordinaria:cleanNum(el("fOrd").value),
+    finde:cleanNum(el("fFin").value),
+    formatos:[...formSel]
+  };
+  let toSave;
+  if(editId){
+    const base=data.find(x=>x.id===editId)||{id:editId};
+    toSave={...base,...rec};
+    data=data.map(x=>x.id===editId?toSave:x);
+  } else {
+    toSave={id:nextId(),...rec};
+    data.push(toSave);
   }
+  lsSaveM();          /* guardar local SIEMPRE — nunca falla */
+  renderM();
+  closeModal();
+  toast("✅ Guardado correctamente");
+  fsSync(toSave);     /* sincronizar Firebase en segundo plano */
 }
-function askDelete(id){const m=data.find(x=>x.id===id);if(!m)return;if(confirm(`¿Eliminar a ${m.alias}? No se puede deshacer.`)){data=data.filter(x=>x.id!==id);deleteMusicoDoc(id);persistM();renderM();toast("Músico eliminado");}}
+function askDelete(id){const m=data.find(x=>x.id===id);if(!m)return;if(confirm(`¿Eliminar a ${m.alias}? No se puede deshacer.`)){deleteMusicoDoc(id);renderM();toast("Músico eliminado");}}
 ["fOrd","fFin"].forEach(id=>el(id).addEventListener("input",e=>{const n=cleanNum(e.target.value);e.target.value=n!=null?n.toLocaleString("es-CO"):"";}));
 function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="musicos-tarima.json";a.click();URL.revokeObjectURL(a.href);toast("Respaldo descargado");}
 function importData(file){const r=new FileReader();r.onload=()=>{try{const arr=JSON.parse(r.result);if(!Array.isArray(arr))throw 0;data=arr.map((m,i)=>({id:m.id??i+1,...m}));persistM();renderM();toast("Respaldo importado");}catch(e){alert("Archivo no válido.");}};r.readAsText(file);}
