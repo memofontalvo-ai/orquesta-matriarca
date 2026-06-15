@@ -235,9 +235,14 @@
   .pres-x{font-size:11.5px;font-weight:700;color:var(--danger);background:none;border:none;cursor:pointer;padding:2px 4px}
   .pres-foot{padding:8px 13px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);background:#FBFAF6}
   body[data-rol="director"] .admin-only{display:none!important}
-  body[data-rol="musico"] .menu-card{display:none!important}
-  .musico-only{display:none}
-  body[data-rol="musico"] .musico-only{display:flex!important}
+  .menu-group{display:none}
+  body[data-rol="admin"] .grp-admin{display:block}
+  body[data-rol="director"] .grp-dir{display:block}
+  body[data-rol="musico"] .grp-mus{display:block}
+  .menu-group+.menu-group{margin-top:22px}
+  .menu-group-h{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 4px 11px;display:flex;align-items:center;gap:9px}
+  .menu-group-h::after{content:"";flex:1;height:1px;background:var(--line)}
+  .menu-group .menu-card+.menu-card{margin-top:14px}
   body[data-dirview="1"] .liq{display:none!important}
   .pres-head-r{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .pres.pendiente{border-color:#C2832A;box-shadow:0 0 0 1px rgba(194,131,42,.35)}
@@ -267,6 +272,7 @@
   .me-lock-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:5px 0;font-size:14px}
   .me-lock-row span{color:var(--muted)}
   .me-lock-row b{color:var(--ink-soft);font-weight:700}
+  .me-lock-sub{font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px;padding-top:9px;border-top:1px dashed var(--line)}
   .mus-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
   .wk-btn{flex:none;width:42px;height:42px;border-radius:11px;border:1px solid var(--line-strong);background:#fff;font-size:22px;font-weight:700;color:var(--ink);cursor:pointer;line-height:1}
   .wk-btn:active{background:#f1efe9}
@@ -417,7 +423,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <div class="login-hint">Músicos: tu <b>usuario</b> es tu cédula y tu <b>contraseña</b> es tu teléfono.</div>
-      <div class="app-version">v3.6 · Orquesta Matriarca</div>
+      <div class="app-version">v3.7 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -428,48 +434,59 @@
       <div class="home-brand"><span class="eyebrow">ORQUESTA</span><span class="wordmark sm">MATRIARCA</span></div>
       <p class="home-hi" id="homeHi">¿Qué vas a hacer hoy?</p>
       <div class="menu-cards">
-        <button class="menu-card admin-only" id="goMusicos">
-          <span class="mc-ico">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15.5 13.6A4.8 4.8 0 0 1 20.5 18"/></svg>
-          </span>
-          <span class="mc-txt"><b>Administrar músicos</b><small>Datos, cuentas, tarifas y formatos</small></span>
-          <span class="mc-arrow">›</span>
-        </button>
-        <button class="menu-card" id="goPlanilla">
-          <span class="mc-ico cal">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/><path d="M7.5 13h2m3 0h2m-7 4h2m3 0h2"/></svg>
-          </span>
-          <span class="mc-txt"><b id="planillaCardTitle">Liquidar semana</b><small id="planillaCardSub">Marcar turnos y calcular pagos</small></span>
-          <span class="mc-arrow">›</span>
-        </button>
-        <button class="menu-card" id="goDirector">
-          <span class="mc-ico" style="background:linear-gradient(135deg,#6f7fc4,#4e5da8)">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M12 3v10.5"/><circle cx="9" cy="16" r="3"/><path d="M12 3l7 2v8"/><circle cx="19" cy="15" r="2.4"/></svg>
-          </span>
-          <span class="mc-txt"><b>Módulo del director</b><small>Programar la semana: grupos, hora y quién tocó</small></span>
-          <span class="mc-arrow">›</span>
-        </button>
-        <button class="menu-card" id="goPropose">
-          <span class="mc-ico" style="background:linear-gradient(135deg,#3E8E6E,#2c6b52)">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M18 7v6M21 10h-6"/></svg>
-          </span>
-          <span class="mc-txt"><b>Proponer contratación</b><small>Crear un músico nuevo para que el administrador lo apruebe</small></span>
-          <span class="mc-arrow">›</span>
-        </button>
-        <button class="menu-card musico-only" id="goMiReporte">
-          <span class="mc-ico" style="background:linear-gradient(135deg,#C79A3A,#9a7426)">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
-          </span>
-          <span class="mc-txt"><b>Reporte de pagos</b><small>Los días que tocaste y tu pago de la semana</small></span>
-          <span class="mc-arrow">›</span>
-        </button>
-        <button class="menu-card musico-only" id="goMisDatos">
-          <span class="mc-ico" style="background:linear-gradient(135deg,#6f7fc4,#4e5da8)">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
-          </span>
-          <span class="mc-txt"><b>Editar mis datos</b><small>Actualiza tu nombre, cédula y teléfono</small></span>
-          <span class="mc-arrow">›</span>
-        </button>
+        <div class="menu-group grp-admin">
+          <div class="menu-group-h">Módulo administrativo</div>
+          <button class="menu-card" id="goMusicos">
+            <span class="mc-ico">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15.5 13.6A4.8 4.8 0 0 1 20.5 18"/></svg>
+            </span>
+            <span class="mc-txt"><b>Administrar músicos</b><small>Datos, cuentas, tarifas y formatos</small></span>
+            <span class="mc-arrow">›</span>
+          </button>
+          <button class="menu-card" id="goPlanilla">
+            <span class="mc-ico cal">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/><path d="M7.5 13h2m3 0h2m-7 4h2m3 0h2"/></svg>
+            </span>
+            <span class="mc-txt"><b id="planillaCardTitle">Liquidar semana</b><small id="planillaCardSub">Marcar turnos y calcular pagos</small></span>
+            <span class="mc-arrow">›</span>
+          </button>
+        </div>
+
+        <div class="menu-group grp-dir">
+          <div class="menu-group-h">Módulo del director</div>
+          <button class="menu-card" id="goDirector">
+            <span class="mc-ico" style="background:linear-gradient(135deg,#6f7fc4,#4e5da8)">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M12 3v10.5"/><circle cx="9" cy="16" r="3"/><path d="M12 3l7 2v8"/><circle cx="19" cy="15" r="2.4"/></svg>
+            </span>
+            <span class="mc-txt"><b>Programar la semana</b><small>Grupos, hora y quién tocó</small></span>
+            <span class="mc-arrow">›</span>
+          </button>
+          <button class="menu-card" id="goPropose">
+            <span class="mc-ico" style="background:linear-gradient(135deg,#3E8E6E,#2c6b52)">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M18 7v6M21 10h-6"/></svg>
+            </span>
+            <span class="mc-txt"><b>Proponer contratación</b><small>Crear un músico nuevo para que el administrador lo apruebe</small></span>
+            <span class="mc-arrow">›</span>
+          </button>
+        </div>
+
+        <div class="menu-group grp-mus">
+          <div class="menu-group-h">Módulo del músico</div>
+          <button class="menu-card" id="goMiReporte">
+            <span class="mc-ico" style="background:linear-gradient(135deg,#C79A3A,#9a7426)">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+            </span>
+            <span class="mc-txt"><b>Reporte de pagos</b><small>Los días que tocaste y tu pago de la semana</small></span>
+            <span class="mc-arrow">›</span>
+          </button>
+          <button class="menu-card" id="goMisDatos">
+            <span class="mc-ico" style="background:linear-gradient(135deg,#6f7fc4,#4e5da8)">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+            </span>
+            <span class="mc-txt"><b>Editar mis datos</b><small>Actualiza tu nombre, cédula y teléfono</small></span>
+            <span class="mc-arrow">›</span>
+          </button>
+        </div>
       </div>
       <button class="home-lock" id="logout">Cerrar sesión</button>
     </div>
@@ -1465,9 +1482,14 @@ function openMisDatos(){
   el("meCedula").value=m.cedula||"";
   el("meTel").value=m.telefono||"";
   el("meErr").textContent="";
-  el("meLocked").innerHTML=`<div class="me-lock-title">🔒 Esto lo maneja el administrador</div>
+  const grupos=(m.formatos&&m.formatos.length)
+    ? m.formatos.map(f=>{const c=FMT_COLORS[f]||'#888';const t=(m.tarifas&&m.tarifas[f]!=null)?cop(m.tarifas[f]):'—';return `<div class="me-lock-row"><span style="color:${c};font-weight:700">${esc(f)}</span><b>${t}</b></div>`;}).join("")
+    : `<div class="me-lock-row"><span>Sin grupos asignados todavía</span><b></b></div>`;
+  el("meLocked").innerHTML=`<div class="me-lock-title">🔒 Esto lo maneja el administrador (solo lectura)</div>
     <div class="me-lock-row"><span>Banco</span><b>${esc(m.banco||"—")}</b></div>
-    <div class="me-lock-row"><span>N.º de cuenta</span><b>${esc(m.cuenta||"—")}</b></div>`;
+    <div class="me-lock-row"><span>N.º de cuenta</span><b>${esc(m.cuenta||"—")}</b></div>
+    <div class="me-lock-sub">Grupos y tarifas</div>
+    ${grupos}`;
   el("musOverlay").classList.add("open");
   el("meNombre").focus();
 }
