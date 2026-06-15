@@ -250,6 +250,9 @@
   .rep-opt small{color:var(--muted);font-size:12px}
   .rep-empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
   .rep-cancel{width:100%;padding:10px;border:none;background:#fff;color:var(--danger);font-weight:700;font-size:13px;cursor:pointer}
+  .btn-guardar{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 24px);margin:12px;padding:14px;border:none;border-radius:12px;background:var(--ink);color:#fff;font-size:15px;font-weight:800;cursor:pointer}
+  .btn-guardar:hover{background:#000}
+  .btn-guardar:active{transform:scale(.99)}
   .pres-time{display:flex;align-items:center;gap:10px;padding:11px 13px 4px}
   .pres-time label{font-size:12px;font-weight:700;color:var(--ink-soft)}
   .pres-time input[type=time]{font-size:14px;font-weight:600;padding:6px 10px;border:1.5px solid var(--line-strong);border-radius:9px;background:#fff;color:var(--ink)}
@@ -335,7 +338,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v2.8 · Orquesta Matriarca</div>
+      <div class="app-version">v2.9 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -843,8 +846,13 @@ function normPres(p,defH){
     fmt:(p&&p.fmt!=null)?p.fmt:null,
     ids:(p&&Array.isArray(p.ids))?p.ids:[],
     hora:(p&&p.hora)?p.hora:(defH||""),
-    status:(p&&p.status==="propuesta")?"propuesta":"aprobada"
+    status:(p&&p.status==="propuesta")?"propuesta":"aprobada",
+    rates:(p&&p.rates&&typeof p.rates==="object")?p.rates:{}
   };
+}
+function effRate(p,m,fmt){
+  if(p.rates && p.rates[m.id]!=null) return p.rates[m.id];
+  return (m.tarifas && m.tarifas[fmt]!=null)? m.tarifas[fmt] : null;
 }
 function isDirector(){ return !!(currentUser && currentUser.rol==="director"); }
 let viewAsDirector=false;
@@ -924,6 +932,7 @@ function dayCard(day){
     </div>
     ${presCount?list:`<div class="pick-empty">Sin presentaciones todavía. Toca <b>“+ Agregar presentación”</b>.</div>`}
     <div class="shift-foot">${presCount} presentaci${presCount===1?'ón':'ones'} · ${totalMus} músico${totalMus===1?'':'s'}${(!dir&&pend>0)?` · <b style="color:#C2832A">${pend} pendiente${pend===1?'':'s'} de validar</b>`:''}</div>
+    ${presCount?`<button class="btn-guardar" onclick="guardarProgramacion()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar programación</button>`:''}
   </div>`;
 }
 function presBlock(p,pi){
@@ -983,8 +992,8 @@ function presBlock(p,pi){
     </div>
     <div class="pres-time">
       <label>Hora en tarima</label>
-      <input type="time" value="${p.hora||''}" onchange="setPresHora(${pi},this.value)">
-      ${per?`<span class="period">${per}</span>`:''}
+      <input type="time" value="${p.hora||''}" onchange="setPresHora(${pi},this.value,this)">
+      ${per?`<span class="period">${per}</span>`:'<span class="period" style="display:none"></span>'}
     </div>
     <div class="sfmt-row">${chips}</div>
     <div class="picklist">${body}</div>
@@ -1000,6 +1009,19 @@ function addReplace(pi,id){
   if(isDirectorView()) p.status="propuesta";
   replaceOpenFor=null;
   persistW();renderWeek();
+}
+function guardarProgramacion(){
+  persistW();
+  const k=keyOf(curMonday);
+  if(window.db && weeks[k]){
+    try{
+      window.db.collection(COL_W).doc(k).set(weeks[k])
+        .then(()=>toast("✓ Programación guardada en la nube"))
+        .catch(()=>toast("Guardada en este dispositivo (sin nube)"));
+    }catch(e){ toast("Guardada en este dispositivo"); }
+  } else {
+    toast("✓ Programación guardada en este dispositivo");
+  }
 }
 function addPres(){
   const day=getWeek().days[selDay];
@@ -1020,11 +1042,20 @@ function setPresFmt(pi,i){
   if(isDirectorView())p.status="propuesta";
   persistW();renderWeek();
 }
-function setPresHora(pi,val){
+function setPresHora(pi,val,inp){
   const p=getWeek().days[selDay].pres[pi];
   p.hora=val||"";
-  if(isDirectorView())p.status="propuesta";
-  persistW();renderWeek();
+  if(isDirectorView()) p.status="propuesta";
+  persistW();
+  // actualizar etiqueta de periodo y pie SIN reconstruir (para no cerrar el selector de hora)
+  try{
+    const presEl=inp.closest(".pres");
+    const per=periodOf(val);
+    const pchip=presEl.querySelector(".pres-time .period");
+    if(pchip){ if(per){ pchip.textContent=per; pchip.style.display=""; } else { pchip.style.display="none"; } }
+    const foot=presEl.querySelector(".pres-foot");
+    if(foot){ const n=p.ids.length; const label=p.fmt?`<span style="color:${FMT_COLORS[p.fmt]};font-weight:700">${esc(p.fmt)}</span>`:'Sin grupo'; foot.innerHTML=`${p.hora?`${p.hora} · `:''}${n} músico${n===1?'':'s'} · ${label}`; }
+  }catch(e){}
 }
 function togglePick(pi,id){
   const p=getWeek().days[selDay].pres[pi];
