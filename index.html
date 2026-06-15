@@ -229,6 +229,14 @@
   .pres-n{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft)}
   .pres-x{font-size:11.5px;font-weight:700;color:var(--danger);background:none;border:none;cursor:pointer;padding:2px 4px}
   .pres-foot{padding:8px 13px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);background:#FBFAF6}
+  body[data-rol="director"] .admin-only{display:none!important}
+  .pres-head-r{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .pres.pendiente{border-color:#C2832A;box-shadow:0 0 0 1px rgba(194,131,42,.35)}
+  .pres.pendiente .pres-head{background:rgba(194,131,42,.10)}
+  .pendtag{font-size:10.5px;font-weight:700;color:#C2832A;text-transform:none;letter-spacing:0}
+  .pres-approve{font-size:11.5px;font-weight:800;padding:6px 11px;border-radius:9px;border:1.5px solid #3E8E6E;background:rgba(62,142,110,.14);color:#2c6b52;cursor:pointer;white-space:nowrap}
+  .pres-approve:hover{background:#3E8E6E;color:#fff}
+  .pres-ok{font-size:11px;font-weight:700;color:#2c6b52;background:rgba(62,142,110,.14);padding:4px 9px;border-radius:7px;white-space:nowrap}
   .pres-time{display:flex;align-items:center;gap:10px;padding:11px 13px 4px}
   .pres-time label{font-size:12px;font-weight:700;color:var(--ink-soft)}
   .pres-time input[type=time]{font-size:14px;font-weight:600;padding:6px 10px;border:1.5px solid var(--line-strong);border-radius:9px;background:#fff;color:var(--ink)}
@@ -255,6 +263,7 @@
   .liq-foot .blk .v{font-family:"Bricolage Grotesque",-apple-system,system-ui,"Segoe UI",sans-serif;font-weight:800;font-size:22px;margin-top:2px}
   .liq-foot .blk .v.amber{color:var(--amber)}
   .liq-empty{padding:40px 18px;text-align:center;color:var(--muted)}
+  .liq-pend{margin:0 0 12px;padding:11px 14px;border-radius:11px;background:rgba(194,131,42,.12);border:1px solid rgba(194,131,42,.4);color:#8a5a14;font-size:12.5px;font-weight:600;line-height:1.4}
 
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(20,21,26,.5);backdrop-filter:blur(2px);display:none;align-items:flex-start;justify-content:center;padding:24px 16px;z-index:50;overflow:auto}
@@ -313,7 +322,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v2.5 · Orquesta Matriarca</div>
+      <div class="app-version">v2.6 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -324,7 +333,7 @@
       <div class="home-brand"><span class="eyebrow">ORQUESTA</span><span class="wordmark sm">MATRIARCA</span></div>
       <p class="home-hi" id="homeHi">¿Qué vas a hacer hoy?</p>
       <div class="menu-cards">
-        <button class="menu-card" id="goMusicos">
+        <button class="menu-card admin-only" id="goMusicos">
           <span class="mc-ico">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15.5 13.6A4.8 4.8 0 0 1 20.5 18"/></svg>
           </span>
@@ -335,7 +344,7 @@
           <span class="mc-ico cal">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/><path d="M7.5 13h2m3 0h2m-7 4h2m3 0h2"/></svg>
           </span>
-          <span class="mc-txt"><b>Liquidar semana</b><small>Marcar turnos y calcular pagos</small></span>
+          <span class="mc-txt"><b id="planillaCardTitle">Liquidar semana</b><small id="planillaCardSub">Marcar turnos y calcular pagos</small></span>
           <span class="mc-arrow">›</span>
         </button>
       </div>
@@ -355,7 +364,7 @@
       <div><h1>Orquesta Matriarca</h1><p>Control de músicos · nómina</p></div>
     </div>
     <nav class="nav">
-      <button data-view="musicos" class="active">Músicos</button>
+      <button data-view="musicos" class="active admin-only">Músicos</button>
       <button data-view="planilla">Planilla semanal</button>
     </nav>
   </header>
@@ -416,7 +425,7 @@
       <div class="days" id="days"></div>
       <div class="shift-grid" id="shiftGrid"></div>
 
-      <div class="liq">
+      <div class="liq admin-only">
         <div class="liq-head">
           <h3>Liquidación de la semana</h3>
           <button class="btn btn-ghost" id="btnCopyLiq">Copiar resumen</button>
@@ -812,9 +821,11 @@ function normPres(p,defH){
   return {
     fmt:(p&&p.fmt!=null)?p.fmt:null,
     ids:(p&&Array.isArray(p.ids))?p.ids:[],
-    hora:(p&&p.hora)?p.hora:(defH||"")
+    hora:(p&&p.hora)?p.hora:(defH||""),
+    status:(p&&p.status==="propuesta")?"propuesta":"aprobada"
   };
 }
+function isDirector(){ return !!(currentUser && currentUser.rol==="director"); }
 function normDay(d){
   if(d && Array.isArray(d.pres)) return {pres:d.pres.map(p=>normPres(p))};
   const out=[];
@@ -875,20 +886,26 @@ function periodOf(hhmm){
   return"Noche";
 }
 function dayCard(day){
+  const dir=isDirector();
   const presCount=day.pres.length;
   const totalMus=day.pres.reduce((a,p)=>a+p.ids.length,0);
+  const pend=day.pres.filter(p=>p.status==="propuesta"&&p.fmt).length;
   const list=day.pres.map((p,pi)=>presBlock(p,pi)).join("");
+  const title=dir?"Presentaciones del día":"Presentaciones del día";
+  const validarTodo=(!dir&&pend>0)?`<button class="addpres" style="border-color:#3E8E6E;color:#2c6b52;background:rgba(62,142,110,.12)" onclick="aprobarDia()">Validar todas (${pend})</button>`:"";
   return `<div class="shift">
     <div class="shift-head">
-      <div class="shift-title"><span class="badge ico sun">${sun()}</span>Presentaciones del día</div>
-      <button class="addpres" onclick="addPres()">+ Agregar presentación</button>
+      <div class="shift-title"><span class="badge ico sun">${sun()}</span>${title}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${validarTodo}<button class="addpres" onclick="addPres()">+ Agregar presentación</button></div>
     </div>
     ${presCount?list:`<div class="pick-empty">Sin presentaciones todavía. Toca <b>“+ Agregar presentación”</b>.</div>`}
-    <div class="shift-foot">${presCount} presentaci${presCount===1?'ón':'ones'} · ${totalMus} músico${totalMus===1?'':'s'}</div>
+    <div class="shift-foot">${presCount} presentaci${presCount===1?'ón':'ones'} · ${totalMus} músico${totalMus===1?'':'s'}${(!dir&&pend>0)?` · <b style="color:#C2832A">${pend} pendiente${pend===1?'':'s'} de validar</b>`:''}</div>
   </div>`;
 }
 function presBlock(p,pi){
+  const dir=isDirector();
   const fmt=p.fmt;
+  const prop=(p.status==="propuesta");
   const chips=FORMATOS.map((f,i)=>{const on=fmt===f;const c=FMT_COLORS[f];
     return `<div class="sfmt ${on?'on':''}" style="${on?`background:${c};border-color:${c};color:#fff`:''}" onclick="setPresFmt(${pi},${i})">${f}</div>`;}).join("");
   let body;
@@ -898,22 +915,32 @@ function presBlock(p,pi){
     const visibles=data.filter(m=>(m.formatos||[]).includes(fmt));
     body=visibles.length?visibles.map(m=>{
       const on=p.ids.includes(m.id);
-      const rate=(m.tarifas&&m.tarifas[fmt]!=null)?m.tarifas[fmt]:null;
-      const rtxt=rate!=null?cop(rate):"Falta tarifa";
+      let rateHtml="";
+      if(!dir){
+        const rate=(m.tarifas&&m.tarifas[fmt]!=null)?m.tarifas[fmt]:null;
+        rateHtml=`<div class="prate ${rate==null?'na':''}">${rate!=null?cop(rate):"Falta tarifa"}</div>`;
+      }
       return `<div class="pick ${on?'on':''}" onclick="togglePick(${pi},${m.id})">
         <div class="check">${on?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>':''}</div>
         <div class="pname">${esc(m.alias)}</div>
-        <div class="prate ${rate==null?'na':''}">${rtxt}</div>
+        ${rateHtml}
       </div>`;
     }).join(""):`<div class="pick-empty">Ningún músico tiene <b>${esc(fmt)}</b> asignado todavía.</div>`;
   }
   const n=p.ids.length;
   const per=periodOf(p.hora);
   const label=fmt?`<span style="color:${FMT_COLORS[fmt]};font-weight:700">${esc(fmt)}</span>`:'Sin grupo';
-  return `<div class="pres">
+  let statusHtml="";
+  if(!dir){
+    statusHtml = prop
+      ? `<button class="pres-approve" onclick="aprobarPres(${pi})">Validar ✓</button>`
+      : `<span class="pres-ok">Validada ✓</span>`;
+  }
+  const pendTag=(!dir&&prop&&fmt)?` · <span class="pendtag">pendiente del director</span>`:'';
+  return `<div class="pres ${(!dir&&prop&&fmt)?'pendiente':''}">
     <div class="pres-head">
-      <span class="pres-n">Presentación ${pi+1}</span>
-      <button class="pres-x" onclick="removePres(${pi})" title="Quitar esta presentación">Quitar ✕</button>
+      <span class="pres-n">Presentación ${pi+1}${pendTag}</span>
+      <div class="pres-head-r">${statusHtml}<button class="pres-x" onclick="removePres(${pi})" title="Quitar esta presentación">Quitar ✕</button></div>
     </div>
     <div class="pres-time">
       <label>Hora en tarima</label>
@@ -927,7 +954,7 @@ function presBlock(p,pi){
 }
 function addPres(){
   const day=getWeek().days[selDay];
-  day.pres.push({fmt:null,ids:[],hora:""});
+  day.pres.push({fmt:null,ids:[],hora:"",status:isDirector()?"propuesta":"aprobada"});
   persistW();renderWeek();
 }
 function removePres(pi){
@@ -941,18 +968,31 @@ function setPresFmt(pi,i){
   const p=getWeek().days[selDay].pres[pi];
   const f=FORMATOS[i];
   p.fmt=(p.fmt===f)?null:f;
+  if(isDirector())p.status="propuesta";
   persistW();renderWeek();
 }
 function setPresHora(pi,val){
   const p=getWeek().days[selDay].pres[pi];
   p.hora=val||"";
+  if(isDirector())p.status="propuesta";
   persistW();renderWeek();
 }
 function togglePick(pi,id){
   const p=getWeek().days[selDay].pres[pi];
   const i=p.ids.indexOf(id);
   if(i<0)p.ids.push(id);else p.ids.splice(i,1);
+  if(isDirector())p.status="propuesta";
   persistW();renderWeek();
+}
+function aprobarPres(pi){
+  const p=getWeek().days[selDay].pres[pi];
+  if(p)p.status="aprobada";
+  persistW();renderWeek();toast("Presentación validada");
+}
+function aprobarDia(){
+  const day=getWeek().days[selDay];
+  let nn=0; day.pres.forEach(p=>{ if(p.status==="propuesta"&&p.fmt){p.status="aprobada";nn++;} });
+  persistW();renderWeek();toast(nn+" presentación"+(nn===1?'':'es')+" validada"+(nn===1?'':'s'));
 }
 
 /* liquidation */
@@ -962,6 +1002,7 @@ function computeLiq(){
   wk.days.forEach(day=>{
     day.pres.forEach(s=>{
       if(!s.fmt) return;
+      if(s.status!=="aprobada") return; // solo lo validado por el administrador
       s.ids.forEach(id=>{
         const m=data.find(x=>x.id===id); if(!m)return;
         const rate=(m.tarifas&&m.tarifas[s.fmt]!=null)?m.tarifas[s.fmt]:0;
@@ -977,9 +1018,11 @@ function computeLiq(){
 function renderLiq(){
   const wk=getWeek();
   const acc=computeLiq();
+  let pendWeek=0; wk.days.forEach(d=>d.pres.forEach(p=>{ if(p.status==="propuesta"&&p.fmt)pendWeek++; }));
+  const pendNote=pendWeek>0?`<div class="liq-pend">⚠ ${pendWeek} presentaci${pendWeek===1?'ón':'ones'} del director pendiente${pendWeek===1?'':'s'} de validar. No suman al total hasta que las valides (botón “Validar ✓” en cada día).</div>`:'';
   const ids=Object.keys(acc).map(Number).filter(id=>data.find(m=>m.id===id));
   if(!ids.length){
-    el("liqBody").innerHTML=`<div class="liq-empty">Aún no has marcado músicos esta semana. Toca un día arriba, elige el grupo y selecciona quién trabajó.</div>`;
+    el("liqBody").innerHTML=pendNote+`<div class="liq-empty">${pendWeek>0?'No hay presentaciones validadas todavía. Valida las propuestas del director para que aparezcan aquí.':'Aún no hay presentaciones validadas esta semana. Toca un día arriba, elige el grupo y selecciona quién trabajó.'}</div>`;
     el("totOrd").textContent="$0";el("totPay").textContent="$0";return;
   }
   ids.sort((a,b)=>(data.find(m=>m.id===a).alias).localeCompare(data.find(m=>m.id===b).alias));
@@ -1001,7 +1044,7 @@ function renderLiq(){
       <td class="total">${cop(total)}</td>
     </tr>`;
   }).join("");
-  el("liqBody").innerHTML=`<table class="liq-table"><thead><tr>
+  el("liqBody").innerHTML=pendNote+`<table class="liq-table"><thead><tr>
     <th>Músico</th><th>Present.</th><th>Grupos</th><th>Subtotal</th><th>Bono</th><th>Descuento</th><th>Total</th>
   </tr></thead><tbody>${rows}</tbody></table>`;
   el("totOrd").textContent=cop(gBase);
@@ -1060,12 +1103,22 @@ function showScreen(name){
   ["login","home","app"].forEach(s=>el("screen-"+s).classList.toggle("active",s===name));
   window.scrollTo(0,0);
 }
+function applyRole(){
+  document.body.dataset.rol = currentUser ? currentUser.rol : "";
+  const dir = currentUser && currentUser.rol==="director";
+  const t=el("planillaCardTitle"), s=el("planillaCardSub");
+  if(t&&s){
+    if(dir){ t.textContent="Registrar presentaciones"; s.textContent="Marca el grupo, la hora y quién tocó"; }
+    else { t.textContent="Liquidar semana"; s.textContent="Marcar turnos y calcular pagos"; }
+  }
+}
 function entrar(){
   const u=el("usr").value.trim().toLowerCase();
   const p=el("pwd").value.trim();
   const found=USERS.find(x=>x.u===u && x.p===p);
   if(found){
     currentUser=found;
+    applyRole();
     el("loginErr").textContent="";
     el("usr").value=""; el("pwd").value="";
     el("homeHi").textContent="Hola, "+found.nombre+". ¿Qué vas a hacer hoy?";
@@ -1075,7 +1128,7 @@ function entrar(){
     el("pwd").select();
   }
 }
-function logout(){ currentUser=null; showScreen("login"); }
+function logout(){ currentUser=null; document.body.dataset.rol=""; showScreen("login"); }
 function abrirModulo(view){
   document.body.dataset.view=view;
   document.querySelectorAll(".nav button").forEach(x=>x.classList.toggle("active",x.dataset.view===view));
