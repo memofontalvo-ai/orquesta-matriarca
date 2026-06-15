@@ -304,7 +304,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v2.2 · Orquesta Matriarca</div>
+      <div class="app-version">v2.3 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -531,53 +531,83 @@ function fsSyncWeek(k,w){
   try{ window.db.collection(COL_W).doc(k).set(w).catch(()=>{}); }catch(e){}
 }
 
-/* ── cargar datos (Firestore → localStorage → SEED) ── */
+/* ── combinar por id, conservando SIEMPRE lo más reciente ── */
+function mergeById(listA, listB){
+  const map=new Map();
+  const put=m=>{ if(m==null||m.id==null)return; const ex=map.get(m.id);
+    if(!ex){ map.set(m.id,m); return; }
+    const ta=ex.updatedAt||0, tb=m.updatedAt||0;
+    map.set(m.id, (tb>=ta)?m:ex);
+  };
+  (listA||[]).forEach(put); (listB||[]).forEach(put);  // B (local) gana ante empate
+  return [...map.values()];
+}
+
+/* ── cargar músicos (combina nube + dispositivo, nunca pisa lo bueno) ── */
 async function loadM(){
+  const localRaw = lsGetM();
+  const localArr = (localRaw && localRaw.length) ? withFormatos(localRaw) : null;
+
   if(window.db){
     try{
       const snap = await Promise.race([
         window.db.collection(COL_M).get(),
         new Promise((_,r)=>setTimeout(()=>r('timeout'),5000))
       ]);
-      if(!snap.empty){
-        const arr = withFormatos(snap.docs.map(d=>d.data()));
-        localStorage.setItem(LS_M, JSON.stringify(arr));
-        return arr;
+      const cloudArr = (snap && !snap.empty) ? withFormatos(snap.docs.map(d=>d.data())) : [];
+
+      /* primera vez de verdad: no hay nada ni en nube ni en dispositivo → sembrar */
+      if(!cloudArr.length && !localArr){
+        const seeded = withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
+        try{ const b=window.db.batch(); seeded.forEach(m=>b.set(window.db.collection(COL_M).doc(String(m.id)),m)); b.commit().catch(()=>{}); }catch(e){}
+        localStorage.setItem(LS_M, JSON.stringify(seeded));
+        return seeded;
       }
-      /* primera vez: sembrar */
-      const seeded = withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
-      const batch = window.db.batch();
-      seeded.forEach(m=>batch.set(window.db.collection(COL_M).doc(String(m.id)),m));
-      await batch.commit().catch(()=>{});
-      localStorage.setItem(LS_M, JSON.stringify(seeded));
-      return seeded;
-    }catch(e){}
+
+      /* combinar y curar la nube con el resultado combinado */
+      const merged = mergeById(cloudArr, localArr||[]);
+      localStorage.setItem(LS_M, JSON.stringify(merged));
+      try{ const b=window.db.batch(); merged.forEach(m=>b.set(window.db.collection(COL_M).doc(String(m.id)),m)); b.commit().catch(()=>{}); }catch(e){}
+      return merged;
+    }catch(e){
+      if(localArr) return localArr;
+    }
   }
-  const local = lsGetM();
-  if(local && local.length) return withFormatos(local);
+  if(localArr) return localArr;
   return withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
 }
 
+/* ── cargar semanas (combina por semana, conserva la más reciente) ── */
+function mergeWeeks(cloud, local){
+  const out={}; const keys=new Set([...Object.keys(cloud||{}), ...Object.keys(local||{})]);
+  keys.forEach(k=>{ const c=(cloud||{})[k], l=(local||{})[k];
+    if(c&&l){ out[k]=((l._ts||0)>=(c._ts||0))?l:c; }
+    else out[k]=c||l;
+  });
+  return out;
+}
 async function loadW(){
+  const local = lsGetW();
   if(window.db){
     try{
       const snap = await Promise.race([
         window.db.collection(COL_W).get(),
         new Promise((_,r)=>setTimeout(()=>r('timeout'),5000))
       ]);
-      const w={};
-      snap.docs.forEach(d=>{ w[d.id]=d.data(); });
-      localStorage.setItem(LS_W, JSON.stringify(w));
-      return w;
+      const cloud={}; if(snap&&snap.docs) snap.docs.forEach(d=>{ cloud[d.id]=d.data(); });
+      const merged=mergeWeeks(cloud, local);
+      localStorage.setItem(LS_W, JSON.stringify(merged));
+      return merged;
     }catch(e){}
   }
-  return lsGetW();
+  return local;
 }
 
 /* ── guardar semana ── */
 function persistW(){
-  lsSaveW();
   const k=keyOf(curMonday);
+  if(weeks[k]) weeks[k]._ts=Date.now();
+  lsSaveW();
   if(weeks[k]) fsSyncWeek(k, weeks[k]);
 }
 
@@ -685,7 +715,8 @@ function save(){
     banco:el("fBanco").value.trim(),
     cuenta:el("fCuenta").value.trim(),
     formatos:fmts,
-    tarifas
+    tarifas,
+    updatedAt:Date.now()
   };
   let toSave;
   if(editId){
