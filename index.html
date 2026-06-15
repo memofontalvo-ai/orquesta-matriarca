@@ -242,6 +242,8 @@
   .pendtag{font-size:10.5px;font-weight:700;color:#C2832A;text-transform:none;letter-spacing:0}
   .pres-approve{font-size:11.5px;font-weight:800;padding:6px 11px;border-radius:9px;border:1.5px solid #3E8E6E;background:rgba(62,142,110,.14);color:#2c6b52;cursor:pointer;white-space:nowrap}
   .pres-approve:hover{background:#3E8E6E;color:#fff}
+  .pres-subt{padding:11px 16px;font-size:14px;font-weight:700;color:var(--ink);background:#FBF6EA;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .pres-subt b{font-size:16px;color:var(--amber-deep);font-weight:800}
   .pres-ok{font-size:11px;font-weight:700;color:#2c6b52;background:rgba(62,142,110,.14);padding:4px 9px;border-radius:7px;white-space:nowrap}
   .reptag{font-size:9.5px;font-weight:800;color:#5B6CB0;background:rgba(91,108,176,.15);padding:2px 6px;border-radius:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}
   .rep-wrap{padding:10px 13px}
@@ -370,7 +372,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v3.1 · Orquesta Matriarca</div>
+      <div class="app-version">v3.2 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -481,10 +483,6 @@
       <div class="shift-grid" id="shiftGrid"></div>
 
       <div class="liq admin-only">
-        <div class="liq-head">
-          <h3 id="liqDayTitle">Nómina del día</h3>
-        </div>
-        <div class="liq-wrap"><div id="liqBody"></div></div>
         <div class="liq-foot">
           <div class="blk"><div class="l">Total del día</div><div class="v amber" id="totDay">$0</div></div>
         </div>
@@ -1030,6 +1028,8 @@ function presBlock(p,pi){
   const n=p.ids.length;
   const per=periodOf(p.hora);
   const label=fmt?`<span style="color:${FMT_COLORS[fmt]};font-weight:700">${esc(fmt)}</span>`:'Sin grupo';
+  let subt=0;
+  if(fmt){ p.ids.forEach(id=>{ const m=data.find(x=>x.id===id); if(m){ const r=effRate(p,m,fmt); subt+=(r!=null?r:0); } }); }
   let statusHtml="";
   if(!dir){
     statusHtml = prop
@@ -1051,6 +1051,7 @@ function presBlock(p,pi){
     <div class="picklist">${body}</div>
     ${fmt?`<div class="rep-wrap">${repBtn}${repPanel}</div>`:''}
     <div class="pres-foot">${p.hora?`${p.hora} · `:''}${n} músico${n===1?'':'s'} · ${label}</div>
+    ${(!dir&&fmt)?`<div class="pres-subt">Subtotal de la presentación <b>${cop(subt)}</b></div>`:''}
   </div>`;
 }
 let replaceOpenFor=null;
@@ -1166,34 +1167,12 @@ function computeLiq(dayIdx){
 }
 function renderLiq(){
   const wk=getWeek();
-  const acc=computeLiq(selDay);
-  const dDate=addDays(curMonday,selDay);
-  const tt=el("liqDayTitle"); if(tt) tt.textContent="Nómina del día · "+cap(fmt(dDate,{weekday:'long',day:'numeric',month:'long'}));
-  let pendDay=0; wk.days[selDay].pres.forEach(p=>{ if(p.status==="propuesta"&&p.fmt)pendDay++; });
-  const pendNote=pendDay>0?`<div class="liq-pend">⚠ ${pendDay} presentaci${pendDay===1?'ón':'ones'} de este día pendiente${pendDay===1?'':'s'} de validar. No suman al total hasta que las valides (botón “Validar ✓”).</div>`:'';
-  const ids=Object.keys(acc).map(Number).filter(id=>data.find(m=>m.id===id));
-  if(!ids.length){
-    el("liqBody").innerHTML=pendNote+`<div class="liq-empty">${pendDay>0?'No hay presentaciones validadas en este día todavía.':'Sin presentaciones validadas en este día. Elige el grupo y marca quién trabajó.'}</div>`;
-    el("totDay").textContent="$0";return;
-  }
-  ids.sort((a,b)=>(data.find(m=>m.id===a).alias).localeCompare(data.find(m=>m.id===b).alias));
   let gDay=0;
-  const rows=ids.map(id=>{
-    const m=data.find(x=>x.id===id);
-    const c=acc[id];
-    gDay+=c.base;
-    const fchips=Object.keys(c.byFmt).map(f=>{const col=FMT_COLORS[f]||"#73757E";return `<span class="lqf" style="--fc:${col}">${esc(f)} ×${c.byFmt[f]}</span>`;}).join("");
-    return `<tr>
-      <td>${esc(m.alias)}</td>
-      <td><span class="cnt-badge cb-ord">${c.count}</span></td>
-      <td class="lqfcell">${fchips}</td>
-      <td class="total">${cop(c.base)}</td>
-    </tr>`;
-  }).join("");
-  el("liqBody").innerHTML=pendNote+`<table class="liq-table"><thead><tr>
-    <th>Músico</th><th>Present.</th><th>Grupos</th><th>Total del día</th>
-  </tr></thead><tbody>${rows}</tbody></table>`;
-  el("totDay").textContent=cop(gDay);
+  wk.days[selDay].pres.forEach(s=>{
+    if(!s.fmt) return;
+    s.ids.forEach(id=>{ const m=data.find(x=>x.id===id); if(!m)return; const r=effRate(s,m,s.fmt); gDay+=(r!=null?r:0); });
+  });
+  const td=el("totDay"); if(td) td.textContent=cop(gDay);
 }
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 function dayShort(i){return cap(fmt(addDays(curMonday,i),{weekday:'short'}).replace('.',''));}
