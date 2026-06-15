@@ -236,8 +236,9 @@
   .pres-foot{padding:8px 13px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);background:#FBFAF6}
   body[data-rol="director"] .admin-only{display:none!important}
   .menu-group{display:none}
-  body[data-rol="admin"] .grp-admin{display:block}
-  body[data-rol="director"] .grp-dir{display:block}
+  body[data-rol="admin"] .menu-group{display:block}
+  body[data-rol="director"] .grp-dir,
+  body[data-rol="director"] .grp-mus{display:block}
   body[data-rol="musico"] .grp-mus{display:block}
   .menu-group+.menu-group{margin-top:22px}
   .menu-group-h{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 4px 11px;display:flex;align-items:center;gap:9px}
@@ -273,6 +274,12 @@
   .me-lock-row span{color:var(--muted)}
   .me-lock-row b{color:var(--ink-soft);font-weight:700}
   .me-lock-sub{font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px;padding-top:9px;border-top:1px dashed var(--line)}
+  .pickmus-search{width:100%;padding:13px 15px;border:1px solid var(--line-strong);border-radius:11px;font-size:15px;margin-bottom:12px}
+  .pickmus-list{max-height:54vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+  .pickmus-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff;cursor:pointer}
+  .pickmus-row:hover{border-color:var(--amber);background:rgba(224,162,59,.06)}
+  .pickmus-row b{font-size:15px;color:var(--ink)}
+  .pickmus-row small{font-size:12px;color:var(--muted)}
   .mus-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
   .wk-btn{flex:none;width:42px;height:42px;border-radius:11px;border:1px solid var(--line-strong);background:#fff;font-size:22px;font-weight:700;color:var(--ink);cursor:pointer;line-height:1}
   .wk-btn:active{background:#f1efe9}
@@ -423,7 +430,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <div class="login-hint">Músicos: tu <b>usuario</b> es tu cédula y tu <b>contraseña</b> es tu teléfono.</div>
-      <div class="app-version">v3.7 · Orquesta Matriarca</div>
+      <div class="app-version">v3.8 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -650,7 +657,7 @@
   <div class="overlay" id="musOverlay">
     <div class="modal">
       <div class="modal-head">
-        <h2>Editar mis datos</h2>
+        <h2 id="meTitle">Editar mis datos</h2>
         <button class="icon-btn" id="musEditClose" aria-label="Cerrar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
       <div class="modal-body">
@@ -665,6 +672,20 @@
           <button class="btn btn-ghost" id="musEditCancel">Cancelar</button>
           <button class="btn btn-primary" id="musEditSave">Guardar mis datos</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selector de músico (para admin/director que consultan el módulo del músico) -->
+  <div class="overlay" id="pickMusOverlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h2>Elegir músico</h2>
+        <button class="icon-btn" id="pickMusClose" aria-label="Cerrar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <input id="pickMusSearch" class="pickmus-search" type="text" placeholder="Buscar músico…" autocomplete="off">
+        <div id="pickMusList" class="pickmus-list"></div>
       </div>
     </div>
   </div>
@@ -1416,8 +1437,17 @@ el("musPrev").onclick=()=>{curMonday=addDays(curMonday,-7);renderMusicoReport();
 el("musNext").onclick=()=>{curMonday=addDays(curMonday,7);renderMusicoReport();};
 el("musToday").onclick=()=>{curMonday=mondayOf(new Date());renderMusicoReport();};
 el("musLogout").onclick=logout;
-el("goMiReporte").onclick=()=>{curMonday=mondayOf(new Date());renderMusicoReport();showScreen("musico");};
-el("goMisDatos").onclick=openMisDatos;
+el("goMiReporte").onclick=()=>{
+  if(currentUser&&currentUser.rol==="musico"){activeMusicoId=currentUser.musicoId;curMonday=mondayOf(new Date());renderMusicoReport();showScreen("musico");}
+  else pickMusico(id=>{activeMusicoId=id;curMonday=mondayOf(new Date());renderMusicoReport();showScreen("musico");});
+};
+el("goMisDatos").onclick=()=>{
+  if(currentUser&&currentUser.rol==="musico"){activeMusicoId=currentUser.musicoId;openMisDatos();}
+  else pickMusico(id=>{activeMusicoId=id;openMisDatos();});
+};
+el("pickMusClose").onclick=()=>el("pickMusOverlay").classList.remove("open");
+el("pickMusSearch").addEventListener("input",renderPickMus);
+el("pickMusOverlay").addEventListener("click",e=>{if(e.target===el("pickMusOverlay"))el("pickMusOverlay").classList.remove("open");});
 el("musEditClose").onclick=closeMisDatos;
 el("musEditCancel").onclick=closeMisDatos;
 el("musEditSave").onclick=saveMisDatos;
@@ -1440,6 +1470,7 @@ const USERS=[
   {u:"director", p:"director",  rol:"director", nombre:"Director musical"},
 ];
 let currentUser=null;
+let activeMusicoId=null;
 function showScreen(name){
   ["login","home","musico","app"].forEach(s=>el("screen-"+s).classList.toggle("active",s===name));
   window.scrollTo(0,0);
@@ -1465,6 +1496,7 @@ function entrar(){
   const mus=data.find(m=>m.estado!=="propuesto" && dig(m.cedula) && dig(m.cedula)===dig(u) && dig(m.telefono) && dig(m.telefono)===dig(p));
   if(mus){
     currentUser={rol:"musico",musicoId:mus.id,nombre:mus.nombre||mus.alias};
+    activeMusicoId=mus.id;
     applyRole();
     el("loginErr").textContent=""; el("usr").value=""; el("pwd").value="";
     el("homeHi").textContent="Hola, "+(mus.nombre||mus.alias)+". Aquí está tu módulo:";
@@ -1475,9 +1507,22 @@ function entrar(){
   el("loginErr").textContent="Usuario o contraseña incorrectos.";
   el("pwd").select();
 }
+let pickMusCb=null;
+function pickMusico(cb){ pickMusCb=cb; el("pickMusSearch").value=""; renderPickMus(); el("pickMusOverlay").classList.add("open"); setTimeout(()=>{try{el("pickMusSearch").focus();}catch(e){}},50); }
+function renderPickMus(){
+  const q=(el("pickMusSearch").value||"").trim().toLowerCase();
+  const rows=data.filter(m=>m.estado!=="propuesto")
+    .filter(m=>!q||[m.nombre,m.alias,m.cedula].some(v=>(v||"").toLowerCase().includes(q)))
+    .sort((a,b)=>(a.nombre||a.alias||"").localeCompare(b.nombre||b.alias||""));
+  el("pickMusList").innerHTML=rows.length
+    ? rows.map(m=>`<button class="pickmus-row" onclick="choosePickMus(${m.id})"><b>${esc(m.nombre||m.alias)}</b>${m.cedula?`<small>C.C. ${esc(m.cedula)}</small>`:''}</button>`).join("")
+    : `<div class="liq-empty">Sin músicos.</div>`;
+}
+function choosePickMus(id){ el("pickMusOverlay").classList.remove("open"); const cb=pickMusCb; pickMusCb=null; if(cb)cb(id); }
 function openMisDatos(){
-  if(!currentUser||currentUser.rol!=="musico")return;
-  const m=data.find(x=>x.id===currentUser.musicoId); if(!m){logout();return;}
+  const m=data.find(x=>x.id===activeMusicoId); if(!m){ if(currentUser&&currentUser.rol==="musico")logout(); return; }
+  const soyMusico=(currentUser&&currentUser.rol==="musico");
+  el("meTitle").textContent=soyMusico?"Editar mis datos":("Datos de "+(m.nombre||m.alias));
   el("meNombre").value=m.nombre||m.alias||"";
   el("meCedula").value=m.cedula||"";
   el("meTel").value=m.telefono||"";
@@ -1495,27 +1540,29 @@ function openMisDatos(){
 }
 function closeMisDatos(){ el("musOverlay").classList.remove("open"); }
 function saveMisDatos(){
-  if(!currentUser||currentUser.rol!=="musico")return;
-  const m=data.find(x=>x.id===currentUser.musicoId); if(!m)return;
+  const m=data.find(x=>x.id===activeMusicoId); if(!m)return;
   const nombre=el("meNombre").value.trim();
   const cedula=el("meCedula").value.trim();
   const telefono=el("meTel").value.trim();
   if(!nombre){el("meErr").textContent="El nombre es obligatorio.";return;}
-  if(!cedula||!telefono){el("meErr").textContent="La cédula y el teléfono son obligatorios (son tu usuario y tu contraseña).";return;}
+  if(!cedula||!telefono){el("meErr").textContent="La cédula y el teléfono son obligatorios (son el usuario y la contraseña del músico).";return;}
   const upd={...m,nombre,alias:nombre,cedula,telefono,updatedAt:Date.now()};
   data=data.map(x=>x.id===m.id?upd:x);
   lsSaveM();
-  currentUser.nombre=nombre;
-  const hi=el("musHi"); if(hi) hi.textContent="Hola, "+nombre;
+  if(currentUser&&currentUser.rol==="musico"&&currentUser.musicoId===m.id){
+    currentUser.nombre=nombre;
+    const hi=el("musHi"); if(hi) hi.textContent="Hola, "+nombre;
+  }
+  if(document.getElementById("list")&&document.body.dataset.view) renderM();
   closeMisDatos();
-  toast("✅ Tus datos quedaron guardados");
+  toast("✅ Datos guardados");
   fsSync(upd);
 }
 function renderMusicoReport(){
-  if(!currentUser||currentUser.rol!=="musico")return;
-  const m=data.find(x=>x.id===currentUser.musicoId);
-  if(!m){ logout(); return; }
-  el("musHi").textContent="Hola, "+(m.nombre||m.alias);
+  const m=data.find(x=>x.id===activeMusicoId);
+  if(!m){ if(currentUser&&currentUser.rol==="musico")logout(); return; }
+  const soyMusico=(currentUser&&currentUser.rol==="musico");
+  el("musHi").textContent=soyMusico?("Hola, "+(m.nombre||m.alias)):("Reporte de "+(m.nombre||m.alias));
   const sun7=addDays(curMonday,6);
   el("musRange").textContent=cap(fmt(curMonday,{day:'numeric',month:'short'}))+" — "+fmt(sun7,{day:'numeric',month:'short',year:'numeric'});
   const wk=weeks[keyOf(curMonday)];
