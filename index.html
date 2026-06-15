@@ -255,6 +255,33 @@
   .rep-opt small{color:var(--muted);font-size:12px}
   .rep-empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
   .rep-cancel{width:100%;padding:10px;border:none;background:#fff;color:var(--danger);font-weight:700;font-size:13px;cursor:pointer}
+  .btn-report{display:flex;align-items:center;justify-content:center;gap:9px;width:calc(100% - 28px);margin:14px;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#3a3a3a,#1a1a1a);color:#fff;font-size:15.5px;font-weight:800;cursor:pointer}
+  .btn-report:active{transform:scale(.99)}
+  .report-overlay{position:fixed;inset:0;background:rgba(20,18,14,.5);backdrop-filter:blur(3px);z-index:200;display:none;align-items:flex-end;justify-content:center}
+  .report-overlay.show{display:flex}
+  .report-sheet{background:var(--bg,#FBFAF6);width:100%;max-width:620px;max-height:92vh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -10px 40px rgba(0,0,0,.25)}
+  .report-bar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 18px 14px;border-bottom:1px solid var(--line)}
+  .report-bar h3{font-size:19px;font-weight:800;margin:0}
+  .report-range{font-size:13px;color:var(--muted);margin-top:3px;font-weight:600}
+  .report-close{flex:none;width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,.06);font-size:16px;cursor:pointer;color:var(--ink)}
+  .report-body{padding:14px;overflow-y:auto;flex:1}
+  .rep-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:11px}
+  .rep-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .rep-name{font-size:17px;font-weight:800}
+  .rep-total{font-size:17px;font-weight:800;color:var(--amber-deep)}
+  .rep-grupos{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .rep-meta{font-size:12.5px;color:var(--ink-soft);margin-top:8px;font-weight:600}
+  .rep-bank{font-size:12px;color:var(--muted);margin-top:3px}
+  .rep-adj{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:11px;padding-top:11px;border-top:1px dashed var(--line)}
+  .rep-adj label{font-size:11.5px;color:var(--muted);font-weight:700;display:flex;flex-direction:column;gap:3px}
+  .rep-adj label b{font-size:14px;color:var(--ink)}
+  .rep-adj .minput{width:92px}
+  .report-foot{padding:14px 18px;border-top:1px solid var(--line);background:#fff}
+  .report-tot{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+  .report-tot span{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .report-tot b{font-size:25px;font-weight:800;color:var(--amber-deep)}
+  .btn-copyrep{width:100%;padding:15px;border:none;border-radius:13px;background:#25D366;color:#fff;font-size:15.5px;font-weight:800;cursor:pointer}
+  .btn-copyrep:active{transform:scale(.99)}
   .btn-guardar{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 24px);margin:12px;padding:14px;border:none;border-radius:12px;background:var(--ink);color:#fff;font-size:15px;font-weight:800;cursor:pointer}
   .btn-guardar:hover{background:#000}
   .btn-guardar:active{transform:scale(.99)}
@@ -343,7 +370,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v3.0 · Orquesta Matriarca</div>
+      <div class="app-version">v3.1 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -455,18 +482,34 @@
 
       <div class="liq admin-only">
         <div class="liq-head">
-          <h3>Liquidación de la semana</h3>
-          <button class="btn btn-ghost" id="btnCopyLiq">Copiar resumen</button>
+          <h3 id="liqDayTitle">Nómina del día</h3>
         </div>
         <div class="liq-wrap"><div id="liqBody"></div></div>
         <div class="liq-foot">
-          <div class="blk"><div class="l">Subtotal presentaciones</div><div class="v" id="totOrd">$0</div></div>
-          <div class="blk"><div class="l">Total a pagar</div><div class="v amber" id="totPay">$0</div></div>
+          <div class="blk"><div class="l">Total del día</div><div class="v amber" id="totDay">$0</div></div>
         </div>
+        <button class="btn-report" id="btnWeekReport">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11H5a2 2 0 0 0-2 2v7M9 7h6M9 3v18M15 11h4a2 2 0 0 1 2 2v7"/><rect x="9" y="3" width="6" height="18" rx="1"/></svg>
+          Reporte semanal de pagos
+        </button>
       </div>
     </section>
   </main>
   </div><!-- /screen-app -->
+
+  <div class="report-overlay" id="reportOverlay">
+    <div class="report-sheet">
+      <div class="report-bar">
+        <div><h3>Reporte semanal de pagos</h3><div class="report-range" id="reportRange"></div></div>
+        <button class="report-close" id="closeReport" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="report-body" id="reportBody"></div>
+      <div class="report-foot">
+        <div class="report-tot"><span>Total a pagar</span><b id="repTot">$0</b></div>
+        <button class="btn-copyrep" id="btnCopyReport">Copiar para WhatsApp</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal músico -->
   <div class="overlay" id="overlay">
@@ -1098,10 +1141,12 @@ function aprobarDia(){
 }
 
 /* liquidation */
-function computeLiq(){
+function computeLiq(dayIdx){
   const wk=getWeek();
-  const acc={}; // id -> {count, base, byFmt:{fmt:count}}
-  wk.days.forEach(day=>{
+  const acc={}; // id -> {count, base, byFmt:{fmt:count}, days:Set}
+  const list = (dayIdx==null) ? wk.days.map((d,i)=>[d,i]) : [[wk.days[dayIdx],dayIdx]];
+  list.forEach(([day,di])=>{
+    if(!day) return;
     day.pres.forEach(s=>{
       if(!s.fmt) return;
       if(s.status!=="aprobada") return; // solo lo validado por el administrador
@@ -1109,10 +1154,11 @@ function computeLiq(){
         const m=data.find(x=>x.id===id); if(!m)return;
         const r=effRate(s,m,s.fmt);
         const rate=(r!=null)?r:0;
-        acc[id]=acc[id]||{count:0,base:0,byFmt:{}};
+        acc[id]=acc[id]||{count:0,base:0,byFmt:{},days:new Set()};
         acc[id].count++;
         acc[id].base+=rate;
         acc[id].byFmt[s.fmt]=(acc[id].byFmt[s.fmt]||0)+1;
+        acc[id].days.add(di);
       });
     });
   });
@@ -1120,63 +1166,109 @@ function computeLiq(){
 }
 function renderLiq(){
   const wk=getWeek();
-  const acc=computeLiq();
-  let pendWeek=0; wk.days.forEach(d=>d.pres.forEach(p=>{ if(p.status==="propuesta"&&p.fmt)pendWeek++; }));
-  const pendNote=pendWeek>0?`<div class="liq-pend">⚠ ${pendWeek} presentaci${pendWeek===1?'ón':'ones'} del director pendiente${pendWeek===1?'':'s'} de validar. No suman al total hasta que las valides (botón “Validar ✓” en cada día).</div>`:'';
+  const acc=computeLiq(selDay);
+  const dDate=addDays(curMonday,selDay);
+  const tt=el("liqDayTitle"); if(tt) tt.textContent="Nómina del día · "+cap(fmt(dDate,{weekday:'long',day:'numeric',month:'long'}));
+  let pendDay=0; wk.days[selDay].pres.forEach(p=>{ if(p.status==="propuesta"&&p.fmt)pendDay++; });
+  const pendNote=pendDay>0?`<div class="liq-pend">⚠ ${pendDay} presentaci${pendDay===1?'ón':'ones'} de este día pendiente${pendDay===1?'':'s'} de validar. No suman al total hasta que las valides (botón “Validar ✓”).</div>`:'';
   const ids=Object.keys(acc).map(Number).filter(id=>data.find(m=>m.id===id));
   if(!ids.length){
-    el("liqBody").innerHTML=pendNote+`<div class="liq-empty">${pendWeek>0?'No hay presentaciones validadas todavía. Valida las propuestas del director para que aparezcan aquí.':'Aún no hay presentaciones validadas esta semana. Toca un día arriba, elige el grupo y selecciona quién trabajó.'}</div>`;
-    el("totOrd").textContent="$0";el("totPay").textContent="$0";return;
+    el("liqBody").innerHTML=pendNote+`<div class="liq-empty">${pendDay>0?'No hay presentaciones validadas en este día todavía.':'Sin presentaciones validadas en este día. Elige el grupo y marca quién trabajó.'}</div>`;
+    el("totDay").textContent="$0";return;
   }
   ids.sort((a,b)=>(data.find(m=>m.id===a).alias).localeCompare(data.find(m=>m.id===b).alias));
-  let gBase=0,gPay=0;
+  let gDay=0;
   const rows=ids.map(id=>{
     const m=data.find(x=>x.id===id);
     const c=acc[id];
-    const ex=wk.extra[id]||{bono:0,desc:0};
-    const total=c.base+(ex.bono||0)-(ex.desc||0);
-    gBase+=c.base;gPay+=total;
+    gDay+=c.base;
     const fchips=Object.keys(c.byFmt).map(f=>{const col=FMT_COLORS[f]||"#73757E";return `<span class="lqf" style="--fc:${col}">${esc(f)} ×${c.byFmt[f]}</span>`;}).join("");
     return `<tr>
       <td>${esc(m.alias)}</td>
       <td><span class="cnt-badge cb-ord">${c.count}</span></td>
       <td class="lqfcell">${fchips}</td>
-      <td class="mono">${cop(c.base)}</td>
-      <td><input class="minput" value="${ex.bono?Number(ex.bono).toLocaleString('es-CO'):''}" placeholder="0" oninput="setExtra(${id},'bono',this.value)"></td>
-      <td><input class="minput" value="${ex.desc?Number(ex.desc).toLocaleString('es-CO'):''}" placeholder="0" oninput="setExtra(${id},'desc',this.value)"></td>
-      <td class="total">${cop(total)}</td>
+      <td class="total">${cop(c.base)}</td>
     </tr>`;
   }).join("");
   el("liqBody").innerHTML=pendNote+`<table class="liq-table"><thead><tr>
-    <th>Músico</th><th>Present.</th><th>Grupos</th><th>Subtotal</th><th>Bono</th><th>Descuento</th><th>Total</th>
+    <th>Músico</th><th>Present.</th><th>Grupos</th><th>Total del día</th>
   </tr></thead><tbody>${rows}</tbody></table>`;
-  el("totOrd").textContent=cop(gBase);
-  el("totPay").textContent=cop(gPay);
+  el("totDay").textContent=cop(gDay);
+}
+function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
+function dayShort(i){return cap(fmt(addDays(curMonday,i),{weekday:'short'}).replace('.',''));}
+
+/* weekly consolidated report */
+function openWeekReport(){ renderWeekReport(); el("reportOverlay").classList.add("show"); }
+function closeWeekReport(){ el("reportOverlay").classList.remove("show"); }
+function renderWeekReport(){
+  const wk=getWeek();
+  const acc=computeLiq();
+  const sun7=addDays(curMonday,6);
+  el("reportRange").textContent=cap(fmt(curMonday,{day:'numeric',month:'long'}))+" al "+fmt(sun7,{day:'numeric',month:'long',year:'numeric'});
+  let pendWeek=0; wk.days.forEach(d=>d.pres.forEach(p=>{ if(p.status==="propuesta"&&p.fmt)pendWeek++; }));
+  const ids=Object.keys(acc).map(Number).filter(id=>data.find(m=>m.id===id));
+  ids.sort((a,b)=>(data.find(m=>m.id===a).alias).localeCompare(data.find(m=>m.id===b).alias));
+  if(!ids.length){
+    el("reportBody").innerHTML=`<div class="liq-empty">Aún no hay presentaciones validadas esta semana.</div>`;
+    el("repTot").textContent="$0"; return;
+  }
+  let gPay=0;
+  const cards=ids.map(id=>{
+    const m=data.find(x=>x.id===id);
+    const c=acc[id];
+    const ex=wk.extra[id]||{bono:0,desc:0};
+    const total=c.base+(ex.bono||0)-(ex.desc||0);
+    gPay+=total;
+    const grupos=Object.keys(c.byFmt).map(f=>{const col=FMT_COLORS[f]||"#73757E";return `<span class="lqf" style="--fc:${col}">${esc(f)} ×${c.byFmt[f]}</span>`;}).join("");
+    const dias=[...c.days].sort((a,b)=>a-b).map(dayShort).join(", ");
+    return `<div class="rep-card">
+      <div class="rep-card-top">
+        <div class="rep-name">${esc(m.alias)}</div>
+        <div class="rep-total">${cop(total)}</div>
+      </div>
+      <div class="rep-grupos">${grupos}</div>
+      <div class="rep-meta">${c.count} presentaci${c.count===1?'ón':'ones'} · Días: ${dias||'—'}</div>
+      <div class="rep-bank">${esc(m.banco||'')} ${esc(m.cuenta||'')}</div>
+      <div class="rep-adj">
+        <label>Subtotal <b>${cop(c.base)}</b></label>
+        <label>Bono <input class="minput" value="${ex.bono?Number(ex.bono).toLocaleString('es-CO'):''}" placeholder="0" oninput="setExtra(${id},'bono',this.value)"></label>
+        <label>Descuento <input class="minput" value="${ex.desc?Number(ex.desc).toLocaleString('es-CO'):''}" placeholder="0" oninput="setExtra(${id},'desc',this.value)"></label>
+      </div>
+    </div>`;
+  }).join("");
+  const pendNote=pendWeek>0?`<div class="liq-pend">⚠ Hay ${pendWeek} presentaci${pendWeek===1?'ón':'ones'} sin validar; no están incluidas en este reporte.</div>`:'';
+  el("reportBody").innerHTML=pendNote+cards;
+  el("repTot").textContent=cop(gPay);
 }
 function setExtra(id,field,val){
   const wk=getWeek();
   wk.extra[id]=wk.extra[id]||{bono:0,desc:0};
   wk.extra[id][field]=cleanNum(val)||0;
   persistW();
-  const acc=computeLiq();let gBase=0,gPay=0;
+  const acc=computeLiq();let gPay=0;
   Object.keys(acc).map(Number).filter(i=>data.find(m=>m.id===i)).forEach(i=>{
     const c=acc[i];const ex=wk.extra[i]||{bono:0,desc:0};
-    gBase+=c.base;gPay+=c.base+(ex.bono||0)-(ex.desc||0);
+    gPay+=c.base+(ex.bono||0)-(ex.desc||0);
   });
-  el("totOrd").textContent=cop(gBase);el("totPay").textContent=cop(gPay);
+  const rt=el("repTot"); if(rt) rt.textContent=cop(gPay);
 }
 function copyLiq(){
   const acc=computeLiq();const wk=getWeek();
   const ids=Object.keys(acc).map(Number).filter(id=>data.find(m=>m.id===id));
   ids.sort((a,b)=>(data.find(m=>m.id===a).alias).localeCompare(data.find(m=>m.id===b).alias));
   const sun7=addDays(curMonday,6);
-  let txt=`LIQUIDACIÓN ${fmt(curMonday,{day:'numeric',month:'long'})} al ${fmt(sun7,{day:'numeric',month:'long',year:'numeric'})}\n\n`;
+  let txt=`REPORTE DE PAGOS · ${cap(fmt(curMonday,{day:'numeric',month:'long'}))} al ${fmt(sun7,{day:'numeric',month:'long',year:'numeric'})}\n\n`;
   let gPay=0;
   ids.forEach(id=>{const m=data.find(x=>x.id===id),c=acc[id];const ex=wk.extra[id]||{bono:0,desc:0};const tot=c.base+(ex.bono||0)-(ex.desc||0);gPay+=tot;
     const det=Object.keys(c.byFmt).map(f=>`${f} ×${c.byFmt[f]}`).join(", ");
-    txt+=`${m.alias}: ${det} = ${cop(tot)}  (${m.banco} ${m.cuenta})\n`;});
-  txt+=`\nTOTAL A PAGAR: ${cop(gPay)}`;
-  navigator.clipboard?.writeText(txt).then(()=>toast("Resumen copiado"),()=>toast("No se pudo copiar"));
+    const dias=[...c.days].sort((a,b)=>a-b).map(dayShort).join(", ");
+    let line=`• ${m.alias} — ${cop(tot)}\n   ${det}\n   ${c.count} present. · Días: ${dias}\n   ${m.banco||''} ${m.cuenta||''}`;
+    if(ex.bono) line+=`\n   (incluye bono ${cop(ex.bono)})`;
+    if(ex.desc) line+=`\n   (menos descuento ${cop(ex.desc)})`;
+    txt+=line+`\n\n`;});
+  txt+=`TOTAL A PAGAR: ${cop(gPay)}`;
+  navigator.clipboard?.writeText(txt).then(()=>toast("Reporte copiado para WhatsApp"),()=>toast("No se pudo copiar"));
 }
 
 /* week nav */
@@ -1191,7 +1283,10 @@ el("btnDeleteInModal").onclick=()=>{if(editId){askDelete(editId);closeModal();}}
 el("search").addEventListener("input",renderM);
 el("btnExport").onclick=exportData;el("btnImport").onclick=()=>el("fileImport").click();
 el("fileImport").addEventListener("change",e=>{if(e.target.files[0])importData(e.target.files[0]);e.target.value="";});
-el("btnCopyLiq").onclick=copyLiq;
+el("btnWeekReport").onclick=openWeekReport;
+el("closeReport").onclick=closeWeekReport;
+el("btnCopyReport").onclick=copyLiq;
+el("reportOverlay").addEventListener("click",e=>{ if(e.target===el("reportOverlay")) closeWeekReport(); });
 el("overlay").addEventListener("click",e=>{if(e.target===el("overlay"))closeModal();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
 
