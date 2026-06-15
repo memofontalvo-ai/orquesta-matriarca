@@ -205,6 +205,11 @@
   .pick .prate{font-size:12.5px;color:var(--muted);font-weight:600}
   .pick.on .prate{color:var(--amber-deep)}
   .pick .prate.na{color:var(--danger)}
+  .prate-wrap{display:flex;align-items:center;gap:7px;flex:none}
+  .prate.edited{color:#5B6CB0;font-weight:800}
+  .prate.edited::after{content:"✎";font-size:10px;margin-left:3px;opacity:.7}
+  .rate-edit{flex:none;width:30px;height:30px;border-radius:8px;border:1.5px solid var(--line-strong);background:#fff;color:var(--muted);display:grid;place-items:center;cursor:pointer;padding:0}
+  .rate-edit:hover{border-color:#5B6CB0;color:#5B6CB0;background:rgba(91,108,176,.08)}
   .shift-foot{padding:9px 16px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);background:#FBFAF6}
   .sfmt-row{display:flex;flex-wrap:wrap;gap:7px;padding:12px 14px 4px}
   .sfmt{flex:0 0 auto;font-size:12px;font-weight:600;padding:6px 11px;border-radius:9px;border:1.5px solid var(--line-strong);background:var(--card);cursor:pointer;color:var(--muted);transition:.13s}
@@ -338,7 +343,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v2.9 · Orquesta Matriarca</div>
+      <div class="app-version">v3.0 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -954,8 +959,12 @@ function presBlock(p,pi){
       const esRep=!inFmtIds.has(m.id);
       let rateHtml="";
       if(!dir){
-        const rate=(m.tarifas&&m.tarifas[fmt]!=null)?m.tarifas[fmt]:null;
-        rateHtml=`<div class="prate ${rate==null?'na':''}">${rate!=null?cop(rate):"Falta tarifa"}</div>`;
+        const r=effRate(p,m,fmt);
+        const overridden=!!(p.rates&&p.rates[m.id]!=null);
+        rateHtml=`<div class="prate-wrap">
+          <div class="prate ${r==null?'na':''} ${overridden?'edited':''}">${r!=null?cop(r):"Falta tarifa"}</div>
+          <button class="rate-edit" onclick="event.stopPropagation();editRate(${pi},${m.id})" title="Editar tarifa de esta presentación">${penIco()}</button>
+        </div>`;
       }
       return `<div class="pick ${on?'on':''}" onclick="togglePick(${pi},${m.id})">
         <div class="check">${on?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>':''}</div>
@@ -1064,6 +1073,19 @@ function togglePick(pi,id){
   if(isDirectorView())p.status="propuesta";
   persistW();renderWeek();
 }
+function editRate(pi,id){
+  const p=getWeek().days[selDay].pres[pi];
+  const m=data.find(x=>x.id===id); if(!m)return;
+  const cur=effRate(p,m,p.fmt);
+  const raw=prompt(`Tarifa de ${m.alias} para ESTA presentación${p.fmt?` (${p.fmt})`:''}.\n\nEscribe el valor en pesos. Deja vacío para usar su tarifa normal.`, cur!=null?cur:"");
+  if(raw===null) return;
+  const clean=String(raw).replace(/[^\d]/g,"");
+  if(!p.rates) p.rates={};
+  if(clean===""){ delete p.rates[id]; }
+  else { p.rates[id]=Number(clean); }
+  persistW();renderWeek();
+  toast("Tarifa actualizada");
+}
 function aprobarPres(pi){
   const p=getWeek().days[selDay].pres[pi];
   if(p)p.status="aprobada";
@@ -1085,7 +1107,8 @@ function computeLiq(){
       if(s.status!=="aprobada") return; // solo lo validado por el administrador
       s.ids.forEach(id=>{
         const m=data.find(x=>x.id===id); if(!m)return;
-        const rate=(m.tarifas&&m.tarifas[s.fmt]!=null)?m.tarifas[s.fmt]:0;
+        const r=effRate(s,m,s.fmt);
+        const rate=(r!=null)?r:0;
         acc[id]=acc[id]||{count:0,base:0,byFmt:{}};
         acc[id].count++;
         acc[id].base+=rate;
