@@ -238,6 +238,18 @@
   .pres-approve{font-size:11.5px;font-weight:800;padding:6px 11px;border-radius:9px;border:1.5px solid #3E8E6E;background:rgba(62,142,110,.14);color:#2c6b52;cursor:pointer;white-space:nowrap}
   .pres-approve:hover{background:#3E8E6E;color:#fff}
   .pres-ok{font-size:11px;font-weight:700;color:#2c6b52;background:rgba(62,142,110,.14);padding:4px 9px;border-radius:7px;white-space:nowrap}
+  .reptag{font-size:9.5px;font-weight:800;color:#5B6CB0;background:rgba(91,108,176,.15);padding:2px 6px;border-radius:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}
+  .rep-wrap{padding:10px 13px}
+  .addrep{width:100%;font-size:12.5px;font-weight:700;padding:9px;border-radius:10px;border:1.5px dashed var(--line-strong);background:#fff;color:var(--ink-soft);cursor:pointer}
+  .addrep:hover{border-color:var(--muted);background:#FBFAF6}
+  .rep-panel{margin-top:10px;border:1.5px solid var(--line-strong);border-radius:11px;background:#FBFAF6;overflow:hidden}
+  .rep-title{padding:10px 13px;font-size:12px;font-weight:700;color:var(--ink-soft);border-bottom:1px solid var(--line)}
+  .rep-opt{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;background:#fff}
+  .rep-opt:hover{background:rgba(91,108,176,.08)}
+  .rep-opt b{font-size:14px;color:var(--ink)}
+  .rep-opt small{color:var(--muted);font-size:12px}
+  .rep-empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
+  .rep-cancel{width:100%;padding:10px;border:none;background:#fff;color:var(--danger);font-weight:700;font-size:13px;cursor:pointer}
   .pres-time{display:flex;align-items:center;gap:10px;padding:11px 13px 4px}
   .pres-time label{font-size:12px;font-weight:700;color:var(--ink-soft)}
   .pres-time input[type=time]{font-size:14px;font-weight:600;padding:6px 10px;border:1.5px solid var(--line-strong);border-radius:9px;background:#fff;color:var(--ink)}
@@ -323,7 +335,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v2.7 · Orquesta Matriarca</div>
+      <div class="app-version">v2.8 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -884,7 +896,7 @@ function renderWeek(){
   renderShifts();
   renderLiq();
 }
-function pickDay(i){selDay=i;renderWeek();}
+function pickDay(i){selDay=i;replaceOpenFor=null;renderWeek();}
 function renderShifts(){
   const wk=getWeek();
   const day=wk.days[selDay];
@@ -920,13 +932,17 @@ function presBlock(p,pi){
   const prop=(p.status==="propuesta");
   const chips=FORMATOS.map((f,i)=>{const on=fmt===f;const c=FMT_COLORS[f];
     return `<div class="sfmt ${on?'on':''}" style="${on?`background:${c};border-color:${c};color:#fff`:''}" onclick="setPresFmt(${pi},${i})">${f}</div>`;}).join("");
-  let body;
+  let body, repBtn="", repPanel="";
   if(!fmt){
     body=`<div class="pick-empty">Elige el grupo de esta presentación.</div>`;
   } else {
-    const visibles=data.filter(m=>(m.formatos||[]).includes(fmt));
+    const inFmt=data.filter(m=>(m.formatos||[]).includes(fmt));
+    const inFmtIds=new Set(inFmt.map(m=>m.id));
+    const extras=data.filter(m=>p.ids.includes(m.id)&&!inFmtIds.has(m.id)); // reemplazos
+    const visibles=inFmt.concat(extras);
     body=visibles.length?visibles.map(m=>{
       const on=p.ids.includes(m.id);
+      const esRep=!inFmtIds.has(m.id);
       let rateHtml="";
       if(!dir){
         const rate=(m.tarifas&&m.tarifas[fmt]!=null)?m.tarifas[fmt]:null;
@@ -934,10 +950,21 @@ function presBlock(p,pi){
       }
       return `<div class="pick ${on?'on':''}" onclick="togglePick(${pi},${m.id})">
         <div class="check">${on?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>':''}</div>
-        <div class="pname">${esc(m.alias)}</div>
+        <div class="pname">${esc(m.alias)}${esRep?' <span class="reptag">reemplazo</span>':''}</div>
         ${rateHtml}
       </div>`;
     }).join(""):`<div class="pick-empty">Ningún músico tiene <b>${esc(fmt)}</b> asignado todavía.</div>`;
+    // botón + panel de reemplazo
+    repBtn=`<button class="addrep" onclick="toggleReplace(${pi})">+ Agregar reemplazo</button>`;
+    if(replaceOpenFor===pi){
+      const shown=new Set(visibles.map(m=>m.id));
+      const cands=data.filter(m=>!shown.has(m.id)).sort((a,b)=>(a.alias||'').localeCompare(b.alias||''));
+      repPanel=`<div class="rep-panel">
+        <div class="rep-title">Elige un reemplazo de toda la lista:</div>
+        ${cands.length?cands.map(m=>`<div class="rep-opt" onclick="addReplace(${pi},${m.id})"><b>${esc(m.alias)}</b><small>${esc(m.nombre||'')}</small></div>`).join(""):'<div class="rep-empty">No hay más músicos para agregar.</div>'}
+        <button class="rep-cancel" onclick="toggleReplace(${pi})">Cancelar</button>
+      </div>`;
+    }
   }
   const n=p.ids.length;
   const per=periodOf(p.hora);
@@ -961,8 +988,18 @@ function presBlock(p,pi){
     </div>
     <div class="sfmt-row">${chips}</div>
     <div class="picklist">${body}</div>
+    ${fmt?`<div class="rep-wrap">${repBtn}${repPanel}</div>`:''}
     <div class="pres-foot">${p.hora?`${p.hora} · `:''}${n} músico${n===1?'':'s'} · ${label}</div>
   </div>`;
+}
+let replaceOpenFor=null;
+function toggleReplace(pi){ replaceOpenFor=(replaceOpenFor===pi)?null:pi; renderWeek(); }
+function addReplace(pi,id){
+  const p=getWeek().days[selDay].pres[pi];
+  if(!p.ids.includes(id)) p.ids.push(id);
+  if(isDirectorView()) p.status="propuesta";
+  replaceOpenFor=null;
+  persistW();renderWeek();
 }
 function addPres(){
   const day=getWeek().days[selDay];
@@ -1089,10 +1126,10 @@ function copyLiq(){
 }
 
 /* week nav */
-el("prevWeek").onclick=()=>{curMonday=addDays(curMonday,-7);renderWeek();};
-el("nextWeek").onclick=()=>{curMonday=addDays(curMonday,7);renderWeek();};
-el("btnToday").onclick=()=>{curMonday=mondayOf(new Date());renderWeek();};
-el("weekPick").onchange=e=>{if(e.target.value){const[y,mo,d]=e.target.value.split('-').map(Number);curMonday=mondayOf(new Date(y,mo-1,d));renderWeek();}};
+el("prevWeek").onclick=()=>{curMonday=addDays(curMonday,-7);replaceOpenFor=null;renderWeek();};
+el("nextWeek").onclick=()=>{curMonday=addDays(curMonday,7);replaceOpenFor=null;renderWeek();};
+el("btnToday").onclick=()=>{curMonday=mondayOf(new Date());replaceOpenFor=null;renderWeek();};
+el("weekPick").onchange=e=>{if(e.target.value){const[y,mo,d]=e.target.value.split('-').map(Number);curMonday=mondayOf(new Date(y,mo-1,d));replaceOpenFor=null;renderWeek();}};
 
 /* listeners */
 el("btnNew").onclick=openNew;el("btnClose").onclick=closeModal;el("btnCancel").onclick=closeModal;el("btnSave").onclick=save;
