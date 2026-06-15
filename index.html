@@ -110,7 +110,7 @@
   .search input:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px rgba(224,162,59,.18)}
   .search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted)}
   .roster{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-  .roster-head,.row{display:grid;grid-template-columns:minmax(150px,1.4fr) minmax(140px,1.3fr) 110px 130px 78px;align-items:center;gap:14px}
+  .roster-head,.row{display:grid;grid-template-columns:minmax(140px,1.2fr) minmax(130px,1fr) minmax(190px,1.9fr) 78px;align-items:center;gap:14px}
   .roster-head{padding:12px 20px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
   .roster-head .ralign,.row .ralign{text-align:right}
   .row{padding:14px 20px;border-bottom:1px solid var(--line);animation:rise .35s ease both}
@@ -136,6 +136,17 @@
   .fmt-opt .tick{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--line-strong);display:grid;place-items:center;color:#fff;flex:none}
   .fmt-opt.on{border-color:transparent;color:#fff}
   .fmt-opt.on .tick{border-color:rgba(255,255,255,.55)}
+  .fmt-row{display:flex;align-items:center;gap:10px;width:100%}
+  .fmt-row .fmt-opt{flex:0 0 auto}
+  .fmt-rate{display:flex;align-items:center;gap:4px;background:#fff;border:1.5px solid var(--line-strong);border-radius:9px;padding:5px 10px;flex:1;max-width:170px}
+  .fmt-rate span{color:var(--muted);font-weight:700;font-size:13px}
+  .fmt-rate input{border:none;outline:none;width:100%;font-size:14px;font-weight:600;color:var(--ink);background:transparent}
+  .tarcell{min-width:0}
+  .tchips{display:flex;flex-wrap:wrap;gap:6px}
+  .tchip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:4px 9px;border-radius:8px;background:var(--fc,#73757E);background:color-mix(in srgb,var(--fc) 13%,#fff);border:1px solid color-mix(in srgb,var(--fc) 32%,#fff)}
+  .tchip b{color:var(--fc);font-weight:700}
+  .tchip i{color:var(--ink);font-weight:700;font-style:normal}
+  .tchip.miss i{color:var(--danger);font-weight:600}
   .fmt-filter{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px}
   .ffil{flex:0 0 auto;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:10px;border:1px solid var(--line-strong);background:var(--card);cursor:pointer;white-space:nowrap;color:var(--muted);transition:.13s}
   .ffil:hover{border-color:var(--amber)}
@@ -195,6 +206,13 @@
   .pick.on .prate{color:var(--amber-deep)}
   .pick .prate.na{color:var(--danger)}
   .shift-foot{padding:9px 16px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);background:#FBFAF6}
+  .sfmt-row{display:flex;flex-wrap:wrap;gap:7px;padding:12px 14px 4px}
+  .sfmt{flex:0 0 auto;font-size:12px;font-weight:600;padding:6px 11px;border-radius:9px;border:1.5px solid var(--line-strong);background:var(--card);cursor:pointer;color:var(--muted);transition:.13s}
+  .sfmt:hover{border-color:var(--muted)}
+  .sfmt.on{color:#fff}
+  .pick-empty{padding:22px 16px;text-align:center;color:var(--muted);font-size:13px}
+  .lqfcell{min-width:120px}
+  .lqf{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;margin:1px 2px 1px 0;color:var(--fc);background:color-mix(in srgb,var(--fc) 13%,#fff)}
 
   /* liquidation */
   .liq{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
@@ -245,9 +263,7 @@
     .roster-head{display:none}
     .row{grid-template-columns:1fr auto;grid-template-areas:"who acts" "bank acts" "rates rates";row-gap:10px;padding:16px}
     .who{grid-area:who}.bank{grid-area:bank}.acts{grid-area:acts}
-    .row .rate-day{grid-area:rates;justify-self:start}.rate{justify-content:flex-start}
-    .row .rate-night{display:none}
-    .rate-day::before{content:"Tarifas — Día: ";color:var(--muted);font-weight:500;font-size:12px}
+    .tarcell{grid-area:rates}
     .grid2{grid-template-columns:1fr}
     .shift-grid{grid-template-columns:1fr}
     .liq-wrap{overflow-x:auto}
@@ -277,7 +293,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v1.5 · Orquesta Matriarca</div>
+      <div class="app-version">v2.0 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -348,7 +364,7 @@
       <div class="roster">
         <div class="roster-head">
           <div>Músico</div><div>Cuenta bancaria</div>
-          <div class="ralign">Tarifa día</div><div class="ralign">Tarifa fin de semana</div>
+          <div>Tarifas por formato</div>
           <div class="ralign">Acciones</div>
         </div>
         <div id="list"></div>
@@ -373,7 +389,6 @@
       </div>
 
       <div class="days" id="days"></div>
-      <div class="fmt-filter" id="fmtFilter"></div>
       <div class="shift-grid" id="shiftGrid"></div>
 
       <div class="liq">
@@ -383,8 +398,7 @@
         </div>
         <div class="liq-wrap"><div id="liqBody"></div></div>
         <div class="liq-foot">
-          <div class="blk"><div class="l">Total ordinario</div><div class="v" id="totOrd">$0</div></div>
-          <div class="blk"><div class="l">Total fin de semana</div><div class="v" id="totEsp">$0</div></div>
+          <div class="blk"><div class="l">Subtotal presentaciones</div><div class="v" id="totOrd">$0</div></div>
           <div class="blk"><div class="l">Total a pagar</div><div class="v amber" id="totPay">$0</div></div>
         </div>
       </div>
@@ -407,10 +421,8 @@
             <datalist id="bancos"><option>Bancolombia</option><option>Davivienda</option><option>BBVA</option><option>Daviplata</option><option>Nequi</option><option>Banco de Bogotá</option><option>Nu</option></datalist>
           </div>
           <div class="field"><label for="fCuenta">Número de cuenta</label><input id="fCuenta" type="text" placeholder="Ej: 300 366 7167" autocomplete="off"></div>
-          <div class="field"><label for="fOrd">Tarifa día / ordinaria</label><div class="money-wrap"><span>$</span><input id="fOrd" type="text" inputmode="numeric" placeholder="135.000"></div></div>
-          <div class="field"><label for="fFin">Tarifa fin de semana</label><div class="money-wrap"><span>$</span><input id="fFin" type="text" inputmode="numeric" placeholder="240.000"></div></div>
         </div>
-        <div class="field" style="margin-top:16px"><label>Formatos en los que toca</label><div class="fmt-picker" id="fmtPicker"></div></div>
+        <div class="field" style="margin-top:16px"><label>Formatos y tarifas <span class="hint">(chulea el grupo y escribe su valor)</span></label><div class="fmt-picker" id="fmtPicker"></div></div>
         <div class="err" id="formErr"></div>
       </div>
       <div class="modal-foot">
@@ -477,7 +489,16 @@ let editId=null;
 let curMonday = mondayOf(new Date());
 let selDay = 0;
 
-const withFormatos = arr => arr.map(m=>({formatos:[],...m}));
+function withFormatos(arr){
+  return arr.map(m=>{
+    const o={formatos:[],...m};
+    if(!o.tarifas || typeof o.tarifas!=='object'){
+      o.tarifas={};
+      (o.formatos||[]).forEach(f=>{ o.tarifas[f]=(o.ordinaria!=null?o.ordinaria:null); });
+    }
+    return o;
+  });
+}
 
 /* ── localStorage helpers ── */
 function lsGetM(){ try{ const r=localStorage.getItem(LS_M); return r?JSON.parse(r):null; }catch(e){ return null; } }
@@ -568,11 +589,6 @@ function persistM(){
 }
 
 function nextId(){ return data.reduce((m,x)=>Math.max(m,x.id),0)+1; }
-function persistW(){
-  const k=keyOf(curMonday);
-  if(weeks[k]) db.collection(COL_W).doc(k).set(weeks[k]).catch(()=>toast("Sin conexión: no se guardó la semana"));
-}
-function nextId(){ return data.reduce((m,x)=>Math.max(m,x.id),0)+1; }
 
 /* helpers */
 const el=id=>document.getElementById(id);
@@ -602,44 +618,63 @@ document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
 });
 
 /* ============ MÚSICOS VIEW ============ */
+function tarifaChips(m){
+  const fmts=m.formatos||[];
+  if(!fmts.length) return `<span class="rate empty">Sin formato asignado</span>`;
+  return `<div class="tchips">`+fmts.map(f=>{
+    const c=FMT_COLORS[f]||"#73757E";
+    const has=m.tarifas&&m.tarifas[f]!=null;
+    const v=has?cop(m.tarifas[f]):"Falta $";
+    return `<span class="tchip ${has?'':'miss'}" style="--fc:${c}"><b>${esc(f)}</b><i>${v}</i></span>`;
+  }).join("")+`</div>`;
+}
 function renderM(){
   const q=el("search").value.trim().toLowerCase();
   const rows=data.filter(m=>!q||[m.alias,m.nombre,m.banco].some(v=>(v||"").toLowerCase().includes(q)));
   el("list").innerHTML = !rows.length
     ? `<div class="empty-state"><b>${data.length?"Sin resultados":"Aún no hay músicos"}</b>${data.length?"Prueba con otro término.":"Agrega tu primer músico."}</div>`
     : rows.map(m=>`<div class="row">
-        <div class="who"><span class="alias">${esc(m.alias)}</span><span class="full">${esc(m.nombre||"")}</span>${fmtChips(m.formatos)}</div>
+        <div class="who"><span class="alias">${esc(m.alias)}</span><span class="full">${esc(m.nombre||"")}</span></div>
         <div class="bank"><span class="name">${esc(m.banco||"—")}</span><span class="acct mono">${esc(m.cuenta||"—")}</span></div>
-        <div class="ralign">${m.ordinaria!=null?`<span class="rate rate-day"><span class="ico sun">${sun()}</span>${cop(m.ordinaria)}</span>`:`<span class="rate rate-day empty">Falta tarifa</span>`}</div>
-        <div class="ralign">${m.finde!=null?`<span class="rate rate-night"><span class="ico moon">${moon()}</span>${cop(m.finde)}</span>`:`<span class="rate rate-night empty">Falta tarifa</span>`}</div>
+        <div class="tarcell">${tarifaChips(m)}</div>
         <div class="acts"><button class="icon-btn" onclick="openEdit(${m.id})">${penIco()}</button><button class="icon-btn del" onclick="askDelete(${m.id})">${trashIco()}</button></div>
       </div>`).join("");
   el("stTotal").textContent=data.length;
-  el("stRate").textContent=data.filter(m=>m.ordinaria!=null&&m.finde!=null).length;
+  el("stRate").textContent=data.filter(m=>m.formatos&&m.formatos.length&&m.formatos.every(f=>m.tarifas&&m.tarifas[f]!=null)).length;
   el("stBanks").textContent=new Set(data.map(m=>(m.banco||"").toLowerCase()).filter(Boolean)).size;
 }
 function openNew(){editId=null;el("modalTitle").textContent="Nuevo músico";el("btnDeleteInModal").style.display="none";setForm({});el("overlay").classList.add("open");el("fAlias").focus();}
 function openEdit(id){const m=data.find(x=>x.id===id);if(!m)return;editId=id;el("modalTitle").textContent="Editar músico";el("btnDeleteInModal").style.display="inline-flex";setForm(m);el("overlay").classList.add("open");}
 let formSel=new Set();
+let formTarifas={};
 function renderFmtPicker(){
   el("fmtPicker").innerHTML=FORMATOS.map((f,i)=>{const on=formSel.has(f);const c=FMT_COLORS[f];
-    return `<div class="fmt-opt ${on?'on':''}" style="${on?`background:${c}`:''}" onclick="toggleFmtOpt(${i})">
-      <span class="tick">${on?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M20 6 9 17l-5-5"/></svg>':''}</span>${f}</div>`;}).join("");
+    const val=(formTarifas[f]!=null)?Number(formTarifas[f]).toLocaleString("es-CO"):"";
+    return `<div class="fmt-row ${on?'on':''}">
+      <div class="fmt-opt ${on?'on':''}" style="${on?`background:${c}`:''}" onclick="toggleFmtOpt(${i})">
+        <span class="tick">${on?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M20 6 9 17l-5-5"/></svg>':''}</span>${f}</div>
+      ${on?`<div class="fmt-rate"><span>$</span><input type="text" inputmode="numeric" placeholder="135.000" value="${val}" oninput="setTarifa(${i},this)"></div>`:''}
+    </div>`;}).join("");
 }
-function toggleFmtOpt(i){ const f=FORMATOS[i]; if(formSel.has(f))formSel.delete(f); else formSel.add(f); renderFmtPicker(); }
-function setForm(m){el("fAlias").value=m.alias||"";el("fNombre").value=m.nombre||"";el("fBanco").value=m.banco||"";el("fCuenta").value=m.cuenta||"";el("fOrd").value=m.ordinaria!=null?Number(m.ordinaria).toLocaleString("es-CO"):"";el("fFin").value=m.finde!=null?Number(m.finde).toLocaleString("es-CO"):"";el("formErr").textContent="";formSel=new Set(m.formatos||[]);renderFmtPicker();}
+function toggleFmtOpt(i){ const f=FORMATOS[i]; if(formSel.has(f)){formSel.delete(f);delete formTarifas[f];} else {formSel.add(f);} renderFmtPicker(); }
+function setTarifa(i,inp){ const f=FORMATOS[i]; const n=cleanNum(inp.value);
+  if(n==null){delete formTarifas[f];inp.value="";return;}
+  formTarifas[f]=n; inp.value=n.toLocaleString("es-CO");
+  const L=inp.value.length; try{inp.setSelectionRange(L,L);}catch(e){} }
+function setForm(m){el("fAlias").value=m.alias||"";el("fNombre").value=m.nombre||"";el("fBanco").value=m.banco||"";el("fCuenta").value=m.cuenta||"";el("formErr").textContent="";formSel=new Set(m.formatos||[]);formTarifas=Object.assign({},m.tarifas||{});renderFmtPicker();}
 function closeModal(){el("overlay").classList.remove("open");}
 function save(){
   const alias=el("fAlias").value.trim();
   if(!alias){el("formErr").textContent="El alias es obligatorio.";el("fAlias").focus();return;}
+  const fmts=[...formSel];
+  const tarifas={}; fmts.forEach(f=>{ if(formTarifas[f]!=null) tarifas[f]=formTarifas[f]; });
   const rec={
     alias,
     nombre:el("fNombre").value.trim(),
     banco:el("fBanco").value.trim(),
     cuenta:el("fCuenta").value.trim(),
-    ordinaria:cleanNum(el("fOrd").value),
-    finde:cleanNum(el("fFin").value),
-    formatos:[...formSel]
+    formatos:fmts,
+    tarifas
   };
   let toSave;
   if(editId){
@@ -657,7 +692,6 @@ function save(){
   fsSync(toSave);     /* sincronizar Firebase en segundo plano */
 }
 function askDelete(id){const m=data.find(x=>x.id===id);if(!m)return;if(confirm(`¿Eliminar a ${m.alias}? No se puede deshacer.`)){deleteMusicoDoc(id);renderM();toast("Músico eliminado");}}
-["fOrd","fFin"].forEach(id=>el(id).addEventListener("input",e=>{const n=cleanNum(e.target.value);e.target.value=n!=null?n.toLocaleString("es-CO"):"";}));
 function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="musicos-tarima.json";a.click();URL.revokeObjectURL(a.href);toast("Respaldo descargado");}
 function importData(file){const r=new FileReader();r.onload=()=>{try{const arr=JSON.parse(r.result);if(!Array.isArray(arr))throw 0;data=arr.map((m,i)=>({id:m.id??i+1,...m}));persistM();renderM();toast("Respaldo importado");}catch(e){alert("Archivo no válido.");}};r.readAsText(file);}
 
@@ -665,12 +699,24 @@ function importData(file){const r=new FileReader();r.onload=()=>{try{const arr=J
 function getWeek(){
   const k=keyOf(curMonday);
   if(!weeks[k]){
-    weeks[k]={days:Array.from({length:7},(_,i)=>({
-      dia:{esp:false,ids:[]},
-      noche:{esp:(i===4||i===5),ids:[]}  // Vie y Sáb noche = especial por defecto
+    weeks[k]={days:Array.from({length:7},()=>({
+      dia:{fmt:null,ids:[]},
+      noche:{fmt:null,ids:[]}
     })), extra:{}};
   }
-  return weeks[k];
+  // normalizar semanas viejas (estructura esp → fmt)
+  const wk=weeks[k];
+  if(!wk.extra)wk.extra={};
+  wk.days.forEach(d=>{
+    ["dia","noche"].forEach(kk=>{
+      const s=d[kk]||{};
+      if(typeof s.fmt==="undefined")s.fmt=null;
+      if(!Array.isArray(s.ids))s.ids=[];
+      delete s.esp;
+      d[kk]=s;
+    });
+  });
+  return wk;
 }
 function renderWeek(){
   const wk=getWeek();
@@ -690,17 +736,9 @@ function renderWeek(){
       <div class="wk">${fmt(date,{month:'short'})}</div>
     </div>`;
   }).join("");
-  renderFmtFilter();
   renderShifts();
   renderLiq();
 }
-let selFmt=null;
-function renderFmtFilter(){
-  const todos=`<div class="ffil ${selFmt===null?'on':''}" style="${selFmt===null?'background:var(--ink)':''}" onclick="setFmt(-1)">Todos</div>`;
-  el("fmtFilter").innerHTML=todos+FORMATOS.map((f,i)=>{const on=selFmt===f;const c=FMT_COLORS[f];
-    return `<div class="ffil ${on?'on':''}" style="${on?`background:${c}`:''}" onclick="setFmt(${i})">${f}</div>`;}).join("");
-}
-function setFmt(i){selFmt=(i<0)?null:FORMATOS[i];renderFmtFilter();renderShifts();}
 function pickDay(i){selDay=i;renderWeek();}
 function renderShifts(){
   const wk=getWeek();
@@ -711,27 +749,33 @@ function renderShifts(){
   ].join("");
 }
 function shiftCard(kind,shift,title,ico,iclass){
-  const esp=shift.esp;
-  const rateField=esp?"finde":"ordinaria";
-  const visibles=data.filter(m=>!selFmt||(m.formatos||[]).includes(selFmt));
-  const list=visibles.length?visibles.map(m=>{
-    const on=shift.ids.includes(m.id);
-    const rate=m[rateField];
-    const rtxt=rate!=null?cop(rate):"Falta tarifa";
-    return `<div class="pick ${on?'on':''}" onclick="togglePick('${kind}',${m.id})">
-      <div class="check">${on?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>':''}</div>
-      <div class="pname">${esc(m.alias)}</div>
-      <div class="prate ${rate==null?'na':''}">${rtxt}</div>
-    </div>`;
-  }).join(""):`<div style="padding:22px 16px;text-align:center;color:var(--muted);font-size:13px">Ningún músico tiene este formato asignado.</div>`;
+  const fmt=shift.fmt;
+  const chips=FORMATOS.map((f,i)=>{const on=fmt===f;const c=FMT_COLORS[f];
+    return `<div class="sfmt ${on?'on':''}" style="${on?`background:${c};border-color:${c};color:#fff`:''}" onclick="setShiftFmt('${kind}',${i})">${f}</div>`;}).join("");
+  let body;
+  if(!fmt){
+    body=`<div class="pick-empty">Elige arriba el grupo que tocó en este turno.</div>`;
+  } else {
+    const visibles=data.filter(m=>(m.formatos||[]).includes(fmt));
+    body=visibles.length?visibles.map(m=>{
+      const on=shift.ids.includes(m.id);
+      const rate=(m.tarifas&&m.tarifas[fmt]!=null)?m.tarifas[fmt]:null;
+      const rtxt=rate!=null?cop(rate):"Falta tarifa";
+      return `<div class="pick ${on?'on':''}" onclick="togglePick('${kind}',${m.id})">
+        <div class="check">${on?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>':''}</div>
+        <div class="pname">${esc(m.alias)}</div>
+        <div class="prate ${rate==null?'na':''}">${rtxt}</div>
+      </div>`;
+    }).join(""):`<div class="pick-empty">Ningún músico tiene <b>${esc(fmt)}</b> asignado todavía.</div>`;
+  }
   const n=shift.ids.length;
   return `<div class="shift">
     <div class="shift-head">
       <div class="shift-title"><span class="badge ${iclass==='sun'?'ico sun':'ico moon'}">${ico}</span>${title}</div>
-      <span class="tarchip ${esp?'esp':'ord'}" onclick="toggleEsp('${kind}')" title="Toca para cambiar la tarifa">${esp?'★ Especial fin de semana':'Día ordinario'}</span>
     </div>
-    <div class="picklist">${list}</div>
-    <div class="shift-foot">${n} músico${n===1?'':'s'} · tarifa ${esp?'especial':'ordinaria'}</div>
+    <div class="sfmt-row">${chips}</div>
+    <div class="picklist">${body}</div>
+    <div class="shift-foot">${fmt?`${n} músico${n===1?'':'s'} · ${esc(fmt)}`:'Sin grupo elegido'}</div>
   </div>`;
 }
 function togglePick(kind,id){
@@ -741,22 +785,28 @@ function togglePick(kind,id){
   if(i<0)arr.push(id);else arr.splice(i,1);
   persistW();renderWeek();
 }
-function toggleEsp(kind){
+function setShiftFmt(kind,i){
   const day=getWeek().days[selDay];
-  day[kind].esp=!day[kind].esp;
+  const f=FORMATOS[i];
+  day[kind].fmt=(day[kind].fmt===f)?null:f;
   persistW();renderWeek();
 }
 
 /* liquidation */
 function computeLiq(){
   const wk=getWeek();
-  const acc={}; // id -> {ord,esp}
+  const acc={}; // id -> {count, base, byFmt:{fmt:count}}
   wk.days.forEach(day=>{
     ["dia","noche"].forEach(k=>{
       const s=day[k];
+      if(!s.fmt) return;
       s.ids.forEach(id=>{
-        acc[id]=acc[id]||{ord:0,esp:0};
-        if(s.esp)acc[id].esp++;else acc[id].ord++;
+        const m=data.find(x=>x.id===id); if(!m)return;
+        const rate=(m.tarifas&&m.tarifas[s.fmt]!=null)?m.tarifas[s.fmt]:0;
+        acc[id]=acc[id]||{count:0,base:0,byFmt:{}};
+        acc[id].count++;
+        acc[id].base+=rate;
+        acc[id].byFmt[s.fmt]=(acc[id].byFmt[s.fmt]||0)+1;
       });
     });
   });
@@ -767,34 +817,32 @@ function renderLiq(){
   const acc=computeLiq();
   const ids=Object.keys(acc).map(Number).filter(id=>data.find(m=>m.id===id));
   if(!ids.length){
-    el("liqBody").innerHTML=`<div class="liq-empty">Aún no has marcado músicos esta semana. Toca un día arriba y selecciona quién trabajó.</div>`;
-    el("totOrd").textContent="$0";el("totEsp").textContent="$0";el("totPay").textContent="$0";return;
+    el("liqBody").innerHTML=`<div class="liq-empty">Aún no has marcado músicos esta semana. Toca un día arriba, elige el grupo y selecciona quién trabajó.</div>`;
+    el("totOrd").textContent="$0";el("totPay").textContent="$0";return;
   }
   ids.sort((a,b)=>(data.find(m=>m.id===a).alias).localeCompare(data.find(m=>m.id===b).alias));
-  let gOrd=0,gEsp=0,gPay=0;
+  let gBase=0,gPay=0;
   const rows=ids.map(id=>{
     const m=data.find(x=>x.id===id);
     const c=acc[id];
-    const t1=c.ord*(m.ordinaria||0), t2=c.esp*(m.finde||0);
     const ex=wk.extra[id]||{bono:0,desc:0};
-    const total=t1+t2+(ex.bono||0)-(ex.desc||0);
-    gOrd+=t1;gEsp+=t2;gPay+=total;
+    const total=c.base+(ex.bono||0)-(ex.desc||0);
+    gBase+=c.base;gPay+=total;
+    const fchips=Object.keys(c.byFmt).map(f=>{const col=FMT_COLORS[f]||"#73757E";return `<span class="lqf" style="--fc:${col}">${esc(f)} ×${c.byFmt[f]}</span>`;}).join("");
     return `<tr>
       <td>${esc(m.alias)}</td>
-      <td><span class="cnt-badge cb-ord">${c.ord}</span></td>
-      <td><span class="cnt-badge cb-esp">${c.esp}</span></td>
-      <td class="mono">${cop(t1)}</td>
-      <td class="mono">${cop(t2)}</td>
+      <td><span class="cnt-badge cb-ord">${c.count}</span></td>
+      <td class="lqfcell">${fchips}</td>
+      <td class="mono">${cop(c.base)}</td>
       <td><input class="minput" value="${ex.bono?Number(ex.bono).toLocaleString('es-CO'):''}" placeholder="0" oninput="setExtra(${id},'bono',this.value)"></td>
       <td><input class="minput" value="${ex.desc?Number(ex.desc).toLocaleString('es-CO'):''}" placeholder="0" oninput="setExtra(${id},'desc',this.value)"></td>
       <td class="total">${cop(total)}</td>
     </tr>`;
   }).join("");
   el("liqBody").innerHTML=`<table class="liq-table"><thead><tr>
-    <th>Músico</th><th>Días ord.</th><th>Días finde</th><th>T. ordinario</th><th>T. finde</th><th>Bono</th><th>Descuento</th><th>Total</th>
+    <th>Músico</th><th>Present.</th><th>Grupos</th><th>Subtotal</th><th>Bono</th><th>Descuento</th><th>Total</th>
   </tr></thead><tbody>${rows}</tbody></table>`;
-  el("totOrd").textContent=cop(gOrd);
-  el("totEsp").textContent=cop(gEsp);
+  el("totOrd").textContent=cop(gBase);
   el("totPay").textContent=cop(gPay);
 }
 function setExtra(id,field,val){
@@ -802,24 +850,24 @@ function setExtra(id,field,val){
   wk.extra[id]=wk.extra[id]||{bono:0,desc:0};
   wk.extra[id][field]=cleanNum(val)||0;
   persistW();
-  // re-format the field + update totals without full re-render to keep focus
-  const acc=computeLiq();let gOrd=0,gEsp=0,gPay=0;
+  const acc=computeLiq();let gBase=0,gPay=0;
   Object.keys(acc).map(Number).filter(i=>data.find(m=>m.id===i)).forEach(i=>{
-    const m=data.find(x=>x.id===i),c=acc[i];const t1=c.ord*(m.ordinaria||0),t2=c.esp*(m.finde||0);
-    const ex=wk.extra[i]||{bono:0,desc:0};gOrd+=t1;gEsp+=t2;gPay+=t1+t2+(ex.bono||0)-(ex.desc||0);
+    const c=acc[i];const ex=wk.extra[i]||{bono:0,desc:0};
+    gBase+=c.base;gPay+=c.base+(ex.bono||0)-(ex.desc||0);
   });
-  el("totOrd").textContent=cop(gOrd);el("totEsp").textContent=cop(gEsp);el("totPay").textContent=cop(gPay);
-  // update that musician's total cell + reformat input
-  const acc2=acc[id]||{ord:0,esp:0};const m=data.find(x=>x.id===id);
-  const ex=wk.extra[id];const total=acc2.ord*(m.ordinaria||0)+acc2.esp*(m.finde||0)+(ex.bono||0)-(ex.desc||0);
+  el("totOrd").textContent=cop(gBase);el("totPay").textContent=cop(gPay);
 }
 function copyLiq(){
   const acc=computeLiq();const wk=getWeek();
   const ids=Object.keys(acc).map(Number).filter(id=>data.find(m=>m.id===id));
+  ids.sort((a,b)=>(data.find(m=>m.id===a).alias).localeCompare(data.find(m=>m.id===b).alias));
   const sun7=addDays(curMonday,6);
   let txt=`LIQUIDACIÓN ${fmt(curMonday,{day:'numeric',month:'long'})} al ${fmt(sun7,{day:'numeric',month:'long',year:'numeric'})}\n\n`;
-  ids.forEach(id=>{const m=data.find(x=>x.id===id),c=acc[id];const t1=c.ord*(m.ordinaria||0),t2=c.esp*(m.finde||0);const ex=wk.extra[id]||{bono:0,desc:0};const tot=t1+t2+(ex.bono||0)-(ex.desc||0);
-    txt+=`${m.alias}: ${c.ord} ord + ${c.esp} finde = ${cop(tot)}  (${m.banco} ${m.cuenta})\n`;});
+  let gPay=0;
+  ids.forEach(id=>{const m=data.find(x=>x.id===id),c=acc[id];const ex=wk.extra[id]||{bono:0,desc:0};const tot=c.base+(ex.bono||0)-(ex.desc||0);gPay+=tot;
+    const det=Object.keys(c.byFmt).map(f=>`${f} ×${c.byFmt[f]}`).join(", ");
+    txt+=`${m.alias}: ${det} = ${cop(tot)}  (${m.banco} ${m.cuenta})\n`;});
+  txt+=`\nTOTAL A PAGAR: ${cop(gPay)}`;
   navigator.clipboard?.writeText(txt).then(()=>toast("Resumen copiado"),()=>toast("No se pudo copiar"));
 }
 
