@@ -213,6 +213,15 @@
   .pick-empty{padding:22px 16px;text-align:center;color:var(--muted);font-size:13px}
   .lqfcell{min-width:120px}
   .lqf{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;margin:1px 2px 1px 0;color:var(--fc);background:color-mix(in srgb,var(--fc) 13%,#fff)}
+  .cloud-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:10px 14px;border-radius:12px;font-size:13px;border:1px solid var(--line-strong);background:var(--card)}
+  .cloud-bar .cloud-dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+  .cloud-bar.ok .cloud-dot{background:#3E8E6E}
+  .cloud-bar.fail .cloud-dot,.cloud-bar.nodb .cloud-dot{background:var(--danger)}
+  .cloud-bar.checking .cloud-dot{background:var(--amber)}
+  .cloud-bar #cloudMsg{flex:1;min-width:150px;color:var(--ink-soft);line-height:1.35}
+  .btn-verify{flex:0 0 auto;font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:9px;border:1.5px solid var(--amber);background:rgba(224,162,59,.12);color:var(--amber-deep);cursor:pointer}
+  .btn-verify:hover{background:var(--amber);color:#1a1306}
+  .btn-verify:disabled{opacity:.6;cursor:default}
   .addpres{font-size:12.5px;font-weight:700;padding:7px 12px;border-radius:9px;border:1.5px solid var(--amber);background:rgba(224,162,59,.12);color:var(--amber-deep);cursor:pointer;white-space:nowrap}
   .addpres:hover{background:var(--amber);color:#1a1306}
   .pres{margin:10px 12px;border:1px solid var(--line-strong);border-radius:12px;overflow:hidden;background:#fff}
@@ -304,7 +313,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v2.3 · Orquesta Matriarca</div>
+      <div class="app-version">v2.4 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -358,6 +367,11 @@
         <div class="mstat"><div class="n" id="stTotal">0</div><div class="l">Músicos</div></div>
         <div class="mstat"><div class="n" id="stRate">0</div><div class="l">Con tarifa lista</div></div>
         <div class="mstat"><div class="n" id="stBanks">0</div><div class="l">Bancos</div></div>
+      </div>
+      <div class="cloud-bar checking" id="cloudBar">
+        <span class="cloud-dot" id="cloudDot"></span>
+        <span id="cloudMsg">Comprobando conexión con la nube…</span>
+        <button class="btn-verify" id="btnVerify">Verificar nube</button>
       </div>
       <div class="toolbar">
         <div class="search">
@@ -544,6 +558,7 @@ function mergeById(listA, listB){
 }
 
 /* ── cargar músicos (combina nube + dispositivo, nunca pisa lo bueno) ── */
+let cloudState='checking'; // 'checking' | 'ok' | 'fail' | 'nodb'
 async function loadM(){
   const localRaw = lsGetM();
   const localArr = (localRaw && localRaw.length) ? withFormatos(localRaw) : null;
@@ -554,6 +569,7 @@ async function loadM(){
         window.db.collection(COL_M).get(),
         new Promise((_,r)=>setTimeout(()=>r('timeout'),5000))
       ]);
+      cloudState='ok';
       const cloudArr = (snap && !snap.empty) ? withFormatos(snap.docs.map(d=>d.data())) : [];
 
       /* primera vez de verdad: no hay nada ni en nube ni en dispositivo → sembrar */
@@ -570,8 +586,11 @@ async function loadM(){
       try{ const b=window.db.batch(); merged.forEach(m=>b.set(window.db.collection(COL_M).doc(String(m.id)),m)); b.commit().catch(()=>{}); }catch(e){}
       return merged;
     }catch(e){
+      cloudState='fail';
       if(localArr) return localArr;
     }
+  } else {
+    cloudState='nodb';
   }
   if(localArr) return localArr;
   return withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
@@ -735,6 +754,51 @@ function save(){
 }
 function askDelete(id){const m=data.find(x=>x.id===id);if(!m)return;if(confirm(`¿Eliminar a ${m.alias}? No se puede deshacer.`)){deleteMusicoDoc(id);renderM();toast("Músico eliminado");}}
 function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="musicos-tarima.json";a.click();URL.revokeObjectURL(a.href);toast("Respaldo descargado");}
+function renderCloudBar(){
+  const bar=el("cloudBar"); if(!bar)return;
+  bar.className="cloud-bar "+cloudState;
+  const msg=el("cloudMsg");
+  if(cloudState==="nodb") msg.textContent="Sin nube: los datos se guardan solo en este dispositivo. Descarga un respaldo con Exportar.";
+  else if(cloudState==="fail") msg.textContent="No se pudo conectar con la nube. Tus datos están seguros en este dispositivo. Toca Verificar nube para reintentar.";
+  else if(cloudState==="ok") msg.textContent="Conectado a la nube. Toca Verificar nube para confirmar que todo quedó respaldado.";
+  else msg.textContent="Comprobando conexión con la nube…";
+}
+async function verifyCloud(){
+  const btn=el("btnVerify"), msg=el("cloudMsg");
+  if(!window.db){ cloudState="nodb"; renderCloudBar(); toast("No hay conexión a la nube configurada"); return; }
+  if(btn){btn.disabled=true;btn.textContent="Verificando…";}
+  try{
+    // 1) subir todos los músicos
+    const b1=window.db.batch();
+    data.forEach(m=>b1.set(window.db.collection(COL_M).doc(String(m.id)),m));
+    await b1.commit();
+    // 2) subir las semanas que existan
+    const ks=Object.keys(weeks);
+    if(ks.length){ const b2=window.db.batch(); ks.forEach(k=>b2.set(window.db.collection(COL_W).doc(k),weeks[k])); await b2.commit().catch(()=>{}); }
+    // 3) leer de vuelta y confirmar
+    const snap=await window.db.collection(COL_M).get();
+    const cloudIds=new Set(snap.docs.map(d=>String(d.id)));
+    const missing=data.filter(m=>!cloudIds.has(String(m.id)));
+    cloudState="ok"; renderCloudBar();
+    const hora=new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
+    if(missing.length===0){
+      msg.textContent="✓ Verificado a las "+hora+": "+data.length+" músicos guardados en la nube. Ya puedes actualizar sin perder datos.";
+      el("cloudBar").className="cloud-bar ok";
+      toast("✓ "+data.length+" músicos confirmados en la nube");
+    } else {
+      msg.textContent="⚠ "+missing.length+" músico(s) no se pudieron confirmar en la nube. Descarga un respaldo con Exportar.";
+      el("cloudBar").className="cloud-bar fail";
+      toast("⚠ Faltaron "+missing.length+" por subir");
+    }
+  }catch(e){
+    cloudState="fail"; renderCloudBar();
+    msg.textContent="⚠ La nube rechazó la escritura (posiblemente las reglas de Firestore). Tus datos están seguros en este dispositivo; descarga un respaldo con Exportar.";
+    el("cloudBar").className="cloud-bar fail";
+    toast("No se pudo guardar en la nube");
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent="Verificar nube";}
+  }
+}
 function importData(file){const r=new FileReader();r.onload=()=>{try{const arr=JSON.parse(r.result);if(!Array.isArray(arr))throw 0;data=arr.map((m,i)=>({id:m.id??i+1,...m}));persistM();renderM();toast("Respaldo importado");}catch(e){alert("Archivo no válido.");}};r.readAsText(file);}
 
 /* ============ PLANILLA VIEW ============ */
@@ -1034,11 +1098,14 @@ async function initApp(){
     data = await loadM();
     weeks = await loadW();
   }catch(e){
+    cloudState="fail";
     toast("Sin conexión a la base de datos");
     if(!data.length) data = withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
   }
   renderM();
+  renderCloudBar();
 }
+el("btnVerify").onclick=verifyCloud;
 initApp();
 </script>
 </body>
