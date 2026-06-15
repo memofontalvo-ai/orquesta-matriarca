@@ -277,7 +277,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v1.2 · Orquesta Matriarca</div>
+      <div class="app-version">v1.3 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -493,10 +493,9 @@ async function loadW(){
   snap.docs.forEach(d=>{ w[d.id]=d.data(); });
   return w;
 }
-/* Guardar UN músico en la nube (más confiable que batch) */
+/* Guardar UN músico en la nube (retorna promesa) */
 function saveMusicoDoc(m){
-  db.collection(COL_M).doc(String(m.id)).set(m)
-    .catch(err=>toast("Error al guardar: revisa tu conexión"));
+  return db.collection(COL_M).doc(String(m.id)).set(m);
 }
 /* Guardar todos los músicos (usado solo en importData) */
 function persistM(){
@@ -570,22 +569,31 @@ function renderFmtPicker(){
 function toggleFmtOpt(i){ const f=FORMATOS[i]; if(formSel.has(f))formSel.delete(f); else formSel.add(f); renderFmtPicker(); }
 function setForm(m){el("fAlias").value=m.alias||"";el("fNombre").value=m.nombre||"";el("fBanco").value=m.banco||"";el("fCuenta").value=m.cuenta||"";el("fOrd").value=m.ordinaria!=null?Number(m.ordinaria).toLocaleString("es-CO"):"";el("fFin").value=m.finde!=null?Number(m.finde).toLocaleString("es-CO"):"";el("formErr").textContent="";formSel=new Set(m.formatos||[]);renderFmtPicker();}
 function closeModal(){el("overlay").classList.remove("open");}
-function save(){
+async function save(){
   const alias=el("fAlias").value.trim();
   if(!alias){el("formErr").textContent="El alias es obligatorio.";el("fAlias").focus();return;}
   const rec={alias,nombre:el("fNombre").value.trim(),banco:el("fBanco").value.trim(),cuenta:el("fCuenta").value.trim(),ordinaria:cleanNum(el("fOrd").value),finde:cleanNum(el("fFin").value),formatos:[...formSel]};
-  if(editId){
-    const updated={...data.find(x=>x.id===editId),...rec};
-    data=data.map(x=>x.id===editId?updated:x);
-    saveMusicoDoc(updated);
-    toast("Músico actualizado");
-  } else {
-    const nuevo={id:nextId(),...rec};
-    data.push(nuevo);
-    saveMusicoDoc(nuevo);
-    toast("Músico agregado");
+  const btn=el("btnSave");
+  btn.disabled=true; btn.textContent="Guardando…";
+  try{
+    if(editId){
+      const updated={...data.find(x=>x.id===editId),...rec};
+      await saveMusicoDoc(updated);
+      data=data.map(x=>x.id===editId?updated:x);
+      toast("✅ Músico guardado correctamente");
+    } else {
+      const nuevo={id:nextId(),...rec};
+      await saveMusicoDoc(nuevo);
+      data.push(nuevo);
+      toast("✅ Músico agregado correctamente");
+    }
+    renderM(); closeModal();
+  } catch(err){
+    el("formErr").textContent="❌ Error al guardar. Revisa tu conexión e intenta de nuevo.";
+    console.error("Firestore save error:", err);
+  } finally {
+    btn.disabled=false; btn.textContent="Guardar músico";
   }
-  renderM();closeModal();
 }
 function askDelete(id){const m=data.find(x=>x.id===id);if(!m)return;if(confirm(`¿Eliminar a ${m.alias}? No se puede deshacer.`)){data=data.filter(x=>x.id!==id);deleteMusicoDoc(id);persistM();renderM();toast("Músico eliminado");}}
 ["fOrd","fFin"].forEach(id=>el(id).addEventListener("input",e=>{const n=cleanNum(e.target.value);e.target.value=n!=null?n.toLocaleString("es-CO"):"";}));
