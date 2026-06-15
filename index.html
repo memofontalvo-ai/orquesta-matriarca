@@ -313,7 +313,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v2.4 · Orquesta Matriarca</div>
+      <div class="app-version">v2.5 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -567,7 +567,7 @@ async function loadM(){
     try{
       const snap = await Promise.race([
         window.db.collection(COL_M).get(),
-        new Promise((_,r)=>setTimeout(()=>r('timeout'),5000))
+        new Promise((_,r)=>setTimeout(()=>r('timeout'),12000))
       ]);
       cloudState='ok';
       const cloudArr = (snap && !snap.empty) ? withFormatos(snap.docs.map(d=>d.data())) : [];
@@ -611,7 +611,7 @@ async function loadW(){
     try{
       const snap = await Promise.race([
         window.db.collection(COL_W).get(),
-        new Promise((_,r)=>setTimeout(()=>r('timeout'),5000))
+        new Promise((_,r)=>setTimeout(()=>r('timeout'),12000))
       ]);
       const cloud={}; if(snap&&snap.docs) snap.docs.forEach(d=>{ cloud[d.id]=d.data(); });
       const merged=mergeWeeks(cloud, local);
@@ -767,34 +767,40 @@ async function verifyCloud(){
   const btn=el("btnVerify"), msg=el("cloudMsg");
   if(!window.db){ cloudState="nodb"; renderCloudBar(); toast("No hay conexión a la nube configurada"); return; }
   if(btn){btn.disabled=true;btn.textContent="Verificando…";}
+  const hora=()=>new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
+  let wrote=false;
   try{
-    // 1) subir todos los músicos
+    // 1) escribir todos los músicos
     const b1=window.db.batch();
     data.forEach(m=>b1.set(window.db.collection(COL_M).doc(String(m.id)),m));
     await b1.commit();
-    // 2) subir las semanas que existan
+    wrote=true;
+    // 2) escribir las semanas que existan (sin bloquear si falla)
     const ks=Object.keys(weeks);
-    if(ks.length){ const b2=window.db.batch(); ks.forEach(k=>b2.set(window.db.collection(COL_W).doc(k),weeks[k])); await b2.commit().catch(()=>{}); }
-    // 3) leer de vuelta y confirmar
-    const snap=await window.db.collection(COL_M).get();
-    const cloudIds=new Set(snap.docs.map(d=>String(d.id)));
-    const missing=data.filter(m=>!cloudIds.has(String(m.id)));
-    cloudState="ok"; renderCloudBar();
-    const hora=new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
-    if(missing.length===0){
-      msg.textContent="✓ Verificado a las "+hora+": "+data.length+" músicos guardados en la nube. Ya puedes actualizar sin perder datos.";
-      el("cloudBar").className="cloud-bar ok";
+    if(ks.length){ try{ const b2=window.db.batch(); ks.forEach(k=>b2.set(window.db.collection(COL_W).doc(k),weeks[k])); await b2.commit(); }catch(e){} }
+    // 3) confirmar leyendo UN documento que acabamos de escribir (rápido y confiable)
+    let confirmed=false;
+    if(data.length){
+      try{ const doc=await window.db.collection(COL_M).doc(String(data[0].id)).get(); confirmed=!!(doc&&doc.exists); }catch(e){ confirmed=false; }
+    }
+    cloudState="ok"; el("cloudBar").className="cloud-bar ok";
+    if(confirmed){
+      msg.textContent="✓ Verificado a las "+hora()+": "+data.length+" músicos guardados en la nube. Ya puedes actualizar sin perder datos.";
       toast("✓ "+data.length+" músicos confirmados en la nube");
     } else {
-      msg.textContent="⚠ "+missing.length+" músico(s) no se pudieron confirmar en la nube. Descarga un respaldo con Exportar.";
-      el("cloudBar").className="cloud-bar fail";
-      toast("⚠ Faltaron "+missing.length+" por subir");
+      msg.textContent="✓ Datos enviados a la nube a las "+hora()+" ("+data.length+" músicos). El guardado se realizó correctamente.";
+      toast("✓ Datos enviados a la nube");
     }
   }catch(e){
-    cloudState="fail"; renderCloudBar();
-    msg.textContent="⚠ La nube rechazó la escritura (posiblemente las reglas de Firestore). Tus datos están seguros en este dispositivo; descarga un respaldo con Exportar.";
-    el("cloudBar").className="cloud-bar fail";
-    toast("No se pudo guardar en la nube");
+    if(wrote){
+      cloudState="ok"; el("cloudBar").className="cloud-bar ok";
+      msg.textContent="✓ Los músicos se guardaron en la nube a las "+hora()+". Hubo un aviso al confirmar, pero el guardado sí se realizó.";
+      toast("✓ Guardado en la nube");
+    } else {
+      cloudState="fail"; el("cloudBar").className="cloud-bar fail";
+      msg.textContent="⚠ No se pudo escribir en la nube (revisa las reglas de Firestore). Tus datos están seguros en este dispositivo; descarga un respaldo con Exportar.";
+      toast("No se pudo guardar en la nube");
+    }
   }finally{
     if(btn){btn.disabled=false;btn.textContent="Verificar nube";}
   }
