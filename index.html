@@ -213,6 +213,17 @@
   .pick-empty{padding:22px 16px;text-align:center;color:var(--muted);font-size:13px}
   .lqfcell{min-width:120px}
   .lqf{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;margin:1px 2px 1px 0;color:var(--fc);background:color-mix(in srgb,var(--fc) 13%,#fff)}
+  .addpres{font-size:12.5px;font-weight:700;padding:7px 12px;border-radius:9px;border:1.5px solid var(--amber);background:rgba(224,162,59,.12);color:var(--amber-deep);cursor:pointer;white-space:nowrap}
+  .addpres:hover{background:var(--amber);color:#1a1306}
+  .pres{margin:10px 12px;border:1px solid var(--line-strong);border-radius:12px;overflow:hidden;background:#fff}
+  .pres-head{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:#FBFAF6;border-bottom:1px solid var(--line)}
+  .pres-n{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft)}
+  .pres-x{font-size:11.5px;font-weight:700;color:var(--danger);background:none;border:none;cursor:pointer;padding:2px 4px}
+  .pres-foot{padding:8px 13px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);background:#FBFAF6}
+  .pres-time{display:flex;align-items:center;gap:10px;padding:11px 13px 4px}
+  .pres-time label{font-size:12px;font-weight:700;color:var(--ink-soft)}
+  .pres-time input[type=time]{font-size:14px;font-weight:600;padding:6px 10px;border:1.5px solid var(--line-strong);border-radius:9px;background:#fff;color:var(--ink)}
+  .pres-time .period{font-size:11px;font-weight:700;color:var(--amber-deep);background:rgba(224,162,59,.14);padding:3px 9px;border-radius:7px}
 
   /* liquidation */
   .liq{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
@@ -293,7 +304,7 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v2.0 · Orquesta Matriarca</div>
+      <div class="app-version">v2.2 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -696,26 +707,35 @@ function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:"a
 function importData(file){const r=new FileReader();r.onload=()=>{try{const arr=JSON.parse(r.result);if(!Array.isArray(arr))throw 0;data=arr.map((m,i)=>({id:m.id??i+1,...m}));persistM();renderM();toast("Respaldo importado");}catch(e){alert("Archivo no válido.");}};r.readAsText(file);}
 
 /* ============ PLANILLA VIEW ============ */
+function normPres(p,defH){
+  return {
+    fmt:(p&&p.fmt!=null)?p.fmt:null,
+    ids:(p&&Array.isArray(p.ids))?p.ids:[],
+    hora:(p&&p.hora)?p.hora:(defH||"")
+  };
+}
+function normDay(d){
+  if(d && Array.isArray(d.pres)) return {pres:d.pres.map(p=>normPres(p))};
+  const out=[];
+  if(d){
+    [["dia","12:00"],["noche","20:00"]].forEach(([kk,defH])=>{
+      const s=d[kk];
+      if(!s) return;
+      if(Array.isArray(s.pres)){ s.pres.forEach(p=>out.push(normPres(p,defH))); }
+      else if(s.fmt!=null || (Array.isArray(s.ids)&&s.ids.length)){ out.push(normPres({fmt:s.fmt,ids:s.ids},defH)); }
+    });
+  }
+  return {pres:out};
+}
 function getWeek(){
   const k=keyOf(curMonday);
   if(!weeks[k]){
-    weeks[k]={days:Array.from({length:7},()=>({
-      dia:{fmt:null,ids:[]},
-      noche:{fmt:null,ids:[]}
-    })), extra:{}};
+    weeks[k]={days:Array.from({length:7},()=>({pres:[]})), extra:{}};
   }
-  // normalizar semanas viejas (estructura esp → fmt)
   const wk=weeks[k];
   if(!wk.extra)wk.extra={};
-  wk.days.forEach(d=>{
-    ["dia","noche"].forEach(kk=>{
-      const s=d[kk]||{};
-      if(typeof s.fmt==="undefined")s.fmt=null;
-      if(!Array.isArray(s.ids))s.ids=[];
-      delete s.esp;
-      d[kk]=s;
-    });
-  });
+  if(!Array.isArray(wk.days)||wk.days.length<7){wk.days=Array.from({length:7},()=>({pres:[]}));}
+  wk.days=wk.days.map(normDay);
   return wk;
 }
 function renderWeek(){
@@ -728,7 +748,8 @@ function renderWeek(){
   el("days").innerHTML=DAYS.map((d,i)=>{
     const date=addDays(curMonday,i);
     const day=wk.days[i];
-    const cnt=new Set([...day.dia.ids,...day.noche.ids]).size;
+    const allIds=[];day.pres.forEach(p=>allIds.push(...p.ids));
+    const cnt=new Set(allIds).size;
     return `<div class="day-pill ${i>=4?'weekend':''} ${i===selDay?'active':''}" onclick="pickDay(${i})">
       ${cnt?`<span class="cnt">${cnt}</span>`:''}
       <div class="dn">${DSHORT[i]}</div>
@@ -743,52 +764,93 @@ function pickDay(i){selDay=i;renderWeek();}
 function renderShifts(){
   const wk=getWeek();
   const day=wk.days[selDay];
-  el("shiftGrid").innerHTML=[
-    shiftCard("dia",day.dia,"Mediodía",sun(),"sun"),
-    shiftCard("noche",day.noche,"Noche",moon(),"moon")
-  ].join("");
+  el("shiftGrid").innerHTML=dayCard(day);
 }
-function shiftCard(kind,shift,title,ico,iclass){
-  const fmt=shift.fmt;
+function periodOf(hhmm){
+  const h=parseInt(String(hhmm||"").split(":")[0],10);
+  if(isNaN(h))return"";
+  if(h<12)return"Mañana";
+  if(h<18)return"Tarde";
+  return"Noche";
+}
+function dayCard(day){
+  const presCount=day.pres.length;
+  const totalMus=day.pres.reduce((a,p)=>a+p.ids.length,0);
+  const list=day.pres.map((p,pi)=>presBlock(p,pi)).join("");
+  return `<div class="shift">
+    <div class="shift-head">
+      <div class="shift-title"><span class="badge ico sun">${sun()}</span>Presentaciones del día</div>
+      <button class="addpres" onclick="addPres()">+ Agregar presentación</button>
+    </div>
+    ${presCount?list:`<div class="pick-empty">Sin presentaciones todavía. Toca <b>“+ Agregar presentación”</b>.</div>`}
+    <div class="shift-foot">${presCount} presentaci${presCount===1?'ón':'ones'} · ${totalMus} músico${totalMus===1?'':'s'}</div>
+  </div>`;
+}
+function presBlock(p,pi){
+  const fmt=p.fmt;
   const chips=FORMATOS.map((f,i)=>{const on=fmt===f;const c=FMT_COLORS[f];
-    return `<div class="sfmt ${on?'on':''}" style="${on?`background:${c};border-color:${c};color:#fff`:''}" onclick="setShiftFmt('${kind}',${i})">${f}</div>`;}).join("");
+    return `<div class="sfmt ${on?'on':''}" style="${on?`background:${c};border-color:${c};color:#fff`:''}" onclick="setPresFmt(${pi},${i})">${f}</div>`;}).join("");
   let body;
   if(!fmt){
-    body=`<div class="pick-empty">Elige arriba el grupo que tocó en este turno.</div>`;
+    body=`<div class="pick-empty">Elige el grupo de esta presentación.</div>`;
   } else {
     const visibles=data.filter(m=>(m.formatos||[]).includes(fmt));
     body=visibles.length?visibles.map(m=>{
-      const on=shift.ids.includes(m.id);
+      const on=p.ids.includes(m.id);
       const rate=(m.tarifas&&m.tarifas[fmt]!=null)?m.tarifas[fmt]:null;
       const rtxt=rate!=null?cop(rate):"Falta tarifa";
-      return `<div class="pick ${on?'on':''}" onclick="togglePick('${kind}',${m.id})">
+      return `<div class="pick ${on?'on':''}" onclick="togglePick(${pi},${m.id})">
         <div class="check">${on?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>':''}</div>
         <div class="pname">${esc(m.alias)}</div>
         <div class="prate ${rate==null?'na':''}">${rtxt}</div>
       </div>`;
     }).join(""):`<div class="pick-empty">Ningún músico tiene <b>${esc(fmt)}</b> asignado todavía.</div>`;
   }
-  const n=shift.ids.length;
-  return `<div class="shift">
-    <div class="shift-head">
-      <div class="shift-title"><span class="badge ${iclass==='sun'?'ico sun':'ico moon'}">${ico}</span>${title}</div>
+  const n=p.ids.length;
+  const per=periodOf(p.hora);
+  const label=fmt?`<span style="color:${FMT_COLORS[fmt]};font-weight:700">${esc(fmt)}</span>`:'Sin grupo';
+  return `<div class="pres">
+    <div class="pres-head">
+      <span class="pres-n">Presentación ${pi+1}</span>
+      <button class="pres-x" onclick="removePres(${pi})" title="Quitar esta presentación">Quitar ✕</button>
+    </div>
+    <div class="pres-time">
+      <label>Hora en tarima</label>
+      <input type="time" value="${p.hora||''}" onchange="setPresHora(${pi},this.value)">
+      ${per?`<span class="period">${per}</span>`:''}
     </div>
     <div class="sfmt-row">${chips}</div>
     <div class="picklist">${body}</div>
-    <div class="shift-foot">${fmt?`${n} músico${n===1?'':'s'} · ${esc(fmt)}`:'Sin grupo elegido'}</div>
+    <div class="pres-foot">${p.hora?`${p.hora} · `:''}${n} músico${n===1?'':'s'} · ${label}</div>
   </div>`;
 }
-function togglePick(kind,id){
+function addPres(){
   const day=getWeek().days[selDay];
-  const arr=day[kind].ids;
-  const i=arr.indexOf(id);
-  if(i<0)arr.push(id);else arr.splice(i,1);
+  day.pres.push({fmt:null,ids:[],hora:""});
   persistW();renderWeek();
 }
-function setShiftFmt(kind,i){
+function removePres(pi){
   const day=getWeek().days[selDay];
+  const p=day.pres[pi];
+  if(p && p.ids.length && !confirm("¿Quitar esta presentación? Se desmarcan sus músicos.")) return;
+  day.pres.splice(pi,1);
+  persistW();renderWeek();
+}
+function setPresFmt(pi,i){
+  const p=getWeek().days[selDay].pres[pi];
   const f=FORMATOS[i];
-  day[kind].fmt=(day[kind].fmt===f)?null:f;
+  p.fmt=(p.fmt===f)?null:f;
+  persistW();renderWeek();
+}
+function setPresHora(pi,val){
+  const p=getWeek().days[selDay].pres[pi];
+  p.hora=val||"";
+  persistW();renderWeek();
+}
+function togglePick(pi,id){
+  const p=getWeek().days[selDay].pres[pi];
+  const i=p.ids.indexOf(id);
+  if(i<0)p.ids.push(id);else p.ids.splice(i,1);
   persistW();renderWeek();
 }
 
@@ -797,8 +859,7 @@ function computeLiq(){
   const wk=getWeek();
   const acc={}; // id -> {count, base, byFmt:{fmt:count}}
   wk.days.forEach(day=>{
-    ["dia","noche"].forEach(k=>{
-      const s=day[k];
+    day.pres.forEach(s=>{
       if(!s.fmt) return;
       s.ids.forEach(id=>{
         const m=data.find(x=>x.id===id); if(!m)return;
