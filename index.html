@@ -235,6 +235,9 @@
   .pres-x{font-size:11.5px;font-weight:700;color:var(--danger);background:none;border:none;cursor:pointer;padding:2px 4px}
   .pres-foot{padding:8px 13px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);background:#FBFAF6}
   body[data-rol="director"] .admin-only{display:none!important}
+  body[data-rol="musico"] .menu-card{display:none!important}
+  .musico-only{display:none}
+  body[data-rol="musico"] .musico-only{display:flex!important}
   body[data-dirview="1"] .liq{display:none!important}
   .pres-head-r{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .pres.pendiente{border-color:#C2832A;box-shadow:0 0 0 1px rgba(194,131,42,.35)}
@@ -258,6 +261,12 @@
   #screen-musico{background:var(--bg,#FBFAF6);overflow-y:auto;padding:0}
   .mus-wrap{max-width:620px;margin:0 auto;padding:26px 18px 40px;min-height:100%}
   .mus-top{margin-bottom:18px}
+  .mus-back{background:none;border:none;color:var(--amber-deep);font-weight:700;font-size:14px;cursor:pointer;padding:0 0 12px}
+  .me-locked{margin-top:18px;background:#FBFAF6;border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+  .me-lock-title{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px}
+  .me-lock-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:5px 0;font-size:14px}
+  .me-lock-row span{color:var(--muted)}
+  .me-lock-row b{color:var(--ink-soft);font-weight:700}
   .mus-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
   .wk-btn{flex:none;width:42px;height:42px;border-radius:11px;border:1px solid var(--line-strong);background:#fff;font-size:22px;font-weight:700;color:var(--ink);cursor:pointer;line-height:1}
   .wk-btn:active{background:#f1efe9}
@@ -408,7 +417,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <div class="login-hint">Músicos: tu <b>usuario</b> es tu cédula y tu <b>contraseña</b> es tu teléfono.</div>
-      <div class="app-version">v3.4 · Orquesta Matriarca</div>
+      <div class="app-version">v3.6 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -447,6 +456,20 @@
           <span class="mc-txt"><b>Proponer contratación</b><small>Crear un músico nuevo para que el administrador lo apruebe</small></span>
           <span class="mc-arrow">›</span>
         </button>
+        <button class="menu-card musico-only" id="goMiReporte">
+          <span class="mc-ico" style="background:linear-gradient(135deg,#C79A3A,#9a7426)">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+          </span>
+          <span class="mc-txt"><b>Reporte de pagos</b><small>Los días que tocaste y tu pago de la semana</small></span>
+          <span class="mc-arrow">›</span>
+        </button>
+        <button class="menu-card musico-only" id="goMisDatos">
+          <span class="mc-ico" style="background:linear-gradient(135deg,#6f7fc4,#4e5da8)">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+          </span>
+          <span class="mc-txt"><b>Editar mis datos</b><small>Actualiza tu nombre, cédula y teléfono</small></span>
+          <span class="mc-arrow">›</span>
+        </button>
       </div>
       <button class="home-lock" id="logout">Cerrar sesión</button>
     </div>
@@ -456,6 +479,7 @@
   <section class="screen" id="screen-musico">
     <div class="mus-wrap">
       <div class="mus-top">
+        <button id="musBack" class="mus-back">‹ Inicio</button>
         <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">MI PAGO SEMANAL</span></div>
         <p class="home-hi" id="musHi">Hola</p>
       </div>
@@ -605,8 +629,30 @@
     </div>
   </div>
 
-  <div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
+  <!-- Modal: el músico edita SUS datos (sin tarifas, banco/cuenta solo lectura) -->
+  <div class="overlay" id="musOverlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h2>Editar mis datos</h2>
+        <button class="icon-btn" id="musEditClose" aria-label="Cerrar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="field"><label for="meNombre">Nombre completo</label><input id="meNombre" type="text" placeholder="Tu nombre" autocomplete="off"></div>
+        <div class="field" style="margin-top:14px"><label for="meCedula">Cédula <span class="hint">(es tu usuario)</span></label><input id="meCedula" type="text" inputmode="numeric" placeholder="Tu cédula" autocomplete="off"></div>
+        <div class="field" style="margin-top:14px"><label for="meTel">Teléfono WhatsApp <span class="hint">(es tu contraseña)</span></label><input id="meTel" type="text" inputmode="tel" placeholder="Tu teléfono" autocomplete="off"></div>
+        <div class="me-locked" id="meLocked"></div>
+        <div class="err" id="meErr"></div>
+      </div>
+      <div class="modal-foot">
+        <div style="margin-left:auto;display:flex;gap:10px">
+          <button class="btn btn-ghost" id="musEditCancel">Cancelar</button>
+          <button class="btn btn-primary" id="musEditSave">Guardar mis datos</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
+  <div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script>
@@ -1353,6 +1399,12 @@ el("musPrev").onclick=()=>{curMonday=addDays(curMonday,-7);renderMusicoReport();
 el("musNext").onclick=()=>{curMonday=addDays(curMonday,7);renderMusicoReport();};
 el("musToday").onclick=()=>{curMonday=mondayOf(new Date());renderMusicoReport();};
 el("musLogout").onclick=logout;
+el("goMiReporte").onclick=()=>{curMonday=mondayOf(new Date());renderMusicoReport();showScreen("musico");};
+el("goMisDatos").onclick=openMisDatos;
+el("musEditClose").onclick=closeMisDatos;
+el("musEditCancel").onclick=closeMisDatos;
+el("musEditSave").onclick=saveMisDatos;
+el("musBack").onclick=()=>showScreen("home");
 el("btnDeleteInModal").onclick=()=>{if(editId){askDelete(editId);closeModal();}};
 el("search").addEventListener("input",renderM);
 el("btnExport").onclick=exportData;el("btnImport").onclick=()=>el("fileImport").click();
@@ -1398,13 +1450,44 @@ function entrar(){
     currentUser={rol:"musico",musicoId:mus.id,nombre:mus.nombre||mus.alias};
     applyRole();
     el("loginErr").textContent=""; el("usr").value=""; el("pwd").value="";
+    el("homeHi").textContent="Hola, "+(mus.nombre||mus.alias)+". Aquí está tu módulo:";
     curMonday=mondayOf(new Date());
-    renderMusicoReport();
-    showScreen("musico");
+    showScreen("home");
     return;
   }
   el("loginErr").textContent="Usuario o contraseña incorrectos.";
   el("pwd").select();
+}
+function openMisDatos(){
+  if(!currentUser||currentUser.rol!=="musico")return;
+  const m=data.find(x=>x.id===currentUser.musicoId); if(!m){logout();return;}
+  el("meNombre").value=m.nombre||m.alias||"";
+  el("meCedula").value=m.cedula||"";
+  el("meTel").value=m.telefono||"";
+  el("meErr").textContent="";
+  el("meLocked").innerHTML=`<div class="me-lock-title">🔒 Esto lo maneja el administrador</div>
+    <div class="me-lock-row"><span>Banco</span><b>${esc(m.banco||"—")}</b></div>
+    <div class="me-lock-row"><span>N.º de cuenta</span><b>${esc(m.cuenta||"—")}</b></div>`;
+  el("musOverlay").classList.add("open");
+  el("meNombre").focus();
+}
+function closeMisDatos(){ el("musOverlay").classList.remove("open"); }
+function saveMisDatos(){
+  if(!currentUser||currentUser.rol!=="musico")return;
+  const m=data.find(x=>x.id===currentUser.musicoId); if(!m)return;
+  const nombre=el("meNombre").value.trim();
+  const cedula=el("meCedula").value.trim();
+  const telefono=el("meTel").value.trim();
+  if(!nombre){el("meErr").textContent="El nombre es obligatorio.";return;}
+  if(!cedula||!telefono){el("meErr").textContent="La cédula y el teléfono son obligatorios (son tu usuario y tu contraseña).";return;}
+  const upd={...m,nombre,alias:nombre,cedula,telefono,updatedAt:Date.now()};
+  data=data.map(x=>x.id===m.id?upd:x);
+  lsSaveM();
+  currentUser.nombre=nombre;
+  const hi=el("musHi"); if(hi) hi.textContent="Hola, "+nombre;
+  closeMisDatos();
+  toast("✅ Tus datos quedaron guardados");
+  fsSync(upd);
 }
 function renderMusicoReport(){
   if(!currentUser||currentUser.rol!=="musico")return;
