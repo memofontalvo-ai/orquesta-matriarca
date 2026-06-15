@@ -244,6 +244,41 @@
   .pres-approve:hover{background:#3E8E6E;color:#fff}
   .pres-subt{padding:11px 16px;font-size:14px;font-weight:700;color:var(--ink);background:#FBF6EA;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
   .pres-subt b{font-size:16px;color:var(--amber-deep);font-weight:800}
+  /* propuestas de contratación */
+  .propose-banner{background:rgba(62,142,110,.12);border:1px solid rgba(62,142,110,.35);color:#2c6b52;padding:12px 14px;border-radius:11px;font-size:13px;line-height:1.45;margin-bottom:16px}
+  .btn-approve{background:#3E8E6E;color:#fff;border:none}
+  .btn-approve:hover{background:#347a5e}
+  .row-prop{background:rgba(62,142,110,.06);border-left:3px solid #3E8E6E}
+  .prop-badge{font-size:9.5px;font-weight:800;color:#2c6b52;background:rgba(62,142,110,.18);padding:2px 7px;border-radius:6px;vertical-align:middle;letter-spacing:.04em}
+  .prop-note{display:block;font-size:11.5px;color:#3E8E6E;margin-top:3px;font-weight:600}
+  .btn-approvecard{background:#3E8E6E;color:#fff;border:none;border-radius:9px;padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .login-hint{margin-top:14px;font-size:12px;color:rgba(255,255,255,.6);text-align:center;line-height:1.5}
+  .login-hint b{color:rgba(255,255,255,.85)}
+  /* pantalla del músico */
+  #screen-musico{background:var(--bg,#FBFAF6);overflow-y:auto;padding:0}
+  .mus-wrap{max-width:620px;margin:0 auto;padding:26px 18px 40px;min-height:100%}
+  .mus-top{margin-bottom:18px}
+  .mus-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+  .wk-btn{flex:none;width:42px;height:42px;border-radius:11px;border:1px solid var(--line-strong);background:#fff;font-size:22px;font-weight:700;color:var(--ink);cursor:pointer;line-height:1}
+  .wk-btn:active{background:#f1efe9}
+  .mus-range{font-size:15px;font-weight:800;color:var(--ink);text-align:center;flex:1}
+  .mus-today{display:block;margin:10px auto 0;background:none;border:none;color:var(--amber-deep);font-weight:700;font-size:13px;cursor:pointer}
+  .mus-body{margin-top:16px;display:flex;flex-direction:column;gap:13px}
+  .mr-day{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .mr-day-h{padding:11px 15px;font-size:14px;font-weight:800;color:var(--ink);background:#FBFAF6;border-bottom:1px solid var(--line)}
+  .mr-item{display:flex;align-items:center;gap:10px;padding:12px 15px;border-bottom:1px solid var(--line)}
+  .mr-item:last-child{border-bottom:none}
+  .mr-grp{font-size:13px;font-weight:700;padding:4px 10px;border-radius:8px;flex:1}
+  .mr-when{font-size:13px;color:var(--muted);font-weight:600;min-width:64px;text-align:right}
+  .mr-val{font-size:15px;font-weight:800;color:var(--amber-deep);min-width:90px;text-align:right}
+  .mr-tag{font-size:11px;font-weight:700;color:#C2832A;background:rgba(194,131,42,.14);padding:3px 8px;border-radius:6px}
+  .mus-pend{margin-top:14px;background:rgba(194,131,42,.1);border:1px solid rgba(194,131,42,.3);color:#8a5a12;padding:11px 14px;border-radius:11px;font-size:12.5px;line-height:1.45}
+  .mus-extra{margin-top:12px}
+  .mr-extra-line{font-size:13px;color:var(--ink-soft);font-weight:600;text-align:right;margin-top:3px}
+  .mus-total{margin-top:16px;background:var(--ink);color:#fff;border-radius:16px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between}
+  .mus-total span{font-size:13px;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.04em;max-width:55%}
+  .mus-total b{font-size:26px;font-weight:800;color:var(--amber)}
+  #screen-musico .home-lock{margin:22px auto 0}
   .pres-ok{font-size:11px;font-weight:700;color:#2c6b52;background:rgba(62,142,110,.14);padding:4px 9px;border-radius:7px;white-space:nowrap}
   .reptag{font-size:9.5px;font-weight:800;color:#5B6CB0;background:rgba(91,108,176,.15);padding:2px 6px;border-radius:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}
   .rep-wrap{padding:10px 13px}
@@ -372,7 +407,8 @@
       </div>
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
-      <div class="app-version">v3.2 · Orquesta Matriarca</div>
+      <div class="login-hint">Músicos: tu <b>usuario</b> es tu cédula y tu <b>contraseña</b> es tu teléfono.</div>
+      <div class="app-version">v3.4 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -404,8 +440,36 @@
           <span class="mc-txt"><b>Módulo del director</b><small>Programar la semana: grupos, hora y quién tocó</small></span>
           <span class="mc-arrow">›</span>
         </button>
+        <button class="menu-card" id="goPropose">
+          <span class="mc-ico" style="background:linear-gradient(135deg,#3E8E6E,#2c6b52)">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M18 7v6M21 10h-6"/></svg>
+          </span>
+          <span class="mc-txt"><b>Proponer contratación</b><small>Crear un músico nuevo para que el administrador lo apruebe</small></span>
+          <span class="mc-arrow">›</span>
+        </button>
       </div>
       <button class="home-lock" id="logout">Cerrar sesión</button>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA: MÚSICO (consulta su pago) ============ -->
+  <section class="screen" id="screen-musico">
+    <div class="mus-wrap">
+      <div class="mus-top">
+        <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">MI PAGO SEMANAL</span></div>
+        <p class="home-hi" id="musHi">Hola</p>
+      </div>
+      <div class="mus-nav">
+        <button id="musPrev" class="wk-btn">‹</button>
+        <div class="mus-range" id="musRange"></div>
+        <button id="musNext" class="wk-btn">›</button>
+      </div>
+      <button id="musToday" class="mus-today">Esta semana</button>
+      <div class="mus-body" id="musBody"></div>
+      <div class="mus-pend" id="musPendNote" style="display:none">⚠ Tienes presentaciones <b>por confirmar</b> por el administrador. Esas todavía no suman al total.</div>
+      <div class="mus-extra" id="musExtra"></div>
+      <div class="mus-total"><span>Pago pendiente de la semana</span><b id="musTot">$0</b></div>
+      <button class="home-lock" id="musLogout">Cerrar sesión</button>
     </div>
   </section>
 
@@ -442,7 +506,7 @@
       <div class="toolbar">
         <div class="search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input id="search" type="text" placeholder="Buscar por nombre, alias o banco…">
+          <input id="search" type="text" placeholder="Buscar por nombre, cédula, teléfono o banco…">
         </div>
         <button class="btn btn-ghost" id="btnExport">Exportar</button>
         <button class="btn btn-ghost" id="btnImport">Importar</button>
@@ -517,21 +581,24 @@
         <button class="icon-btn" id="btnClose" aria-label="Cerrar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
       <div class="modal-body">
+        <div class="propose-banner" id="proposeBanner" style="display:none">Estás <b>proponiendo</b> un músico. Llena sus datos y marca los grupos en los que tocaría. <b>El administrador le asignará la tarifa y aprobará la contratación.</b></div>
         <div class="grid2">
-          <div class="field"><label for="fAlias">Alias <span class="hint">(en la planilla)</span></label><input id="fAlias" type="text" placeholder="Ej: DJ" autocomplete="off"></div>
           <div class="field"><label for="fNombre">Nombre completo</label><input id="fNombre" type="text" placeholder="Ej: Efrén Ospina" autocomplete="off"></div>
+          <div class="field"><label for="fCedula">Cédula</label><input id="fCedula" type="text" inputmode="numeric" placeholder="Ej: 1098765432" autocomplete="off"></div>
+          <div class="field"><label for="fTel">Teléfono (WhatsApp)</label><input id="fTel" type="text" inputmode="tel" placeholder="Ej: 300 366 7167" autocomplete="off"></div>
           <div class="field"><label for="fBanco">Banco</label><input id="fBanco" type="text" list="bancos" placeholder="Ej: Bancolombia" autocomplete="off">
             <datalist id="bancos"><option>Bancolombia</option><option>Davivienda</option><option>BBVA</option><option>Daviplata</option><option>Nequi</option><option>Banco de Bogotá</option><option>Nu</option></datalist>
           </div>
           <div class="field"><label for="fCuenta">Número de cuenta</label><input id="fCuenta" type="text" placeholder="Ej: 300 366 7167" autocomplete="off"></div>
         </div>
-        <div class="field" style="margin-top:16px"><label>Formatos y tarifas <span class="hint">(chulea el grupo y escribe su valor)</span></label><div class="fmt-picker" id="fmtPicker"></div></div>
+        <div class="field" style="margin-top:16px"><label id="fmtLabel">Formatos y tarifas <span class="hint">(chulea el grupo y escribe su valor)</span></label><div class="fmt-picker" id="fmtPicker"></div></div>
         <div class="err" id="formErr"></div>
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" id="btnDeleteInModal" style="display:none;color:var(--danger)">Eliminar</button>
         <div style="margin-left:auto;display:flex;gap:10px">
           <button class="btn btn-ghost" id="btnCancel">Cancelar</button>
+          <button class="btn btn-approve" id="btnApprove" style="display:none">Aprobar contratación</button>
           <button class="btn btn-primary" id="btnSave">Guardar músico</button>
         </div>
       </div>
@@ -599,6 +666,8 @@ function withFormatos(arr){
       o.tarifas={};
       (o.formatos||[]).forEach(f=>{ o.tarifas[f]=(o.ordinaria!=null?o.ordinaria:null); });
     }
+    if(!o.estado) o.estado="activo"; /* activo | propuesto (propuesta de contratación del director) */
+    if(o.alias && !o.nombre) o.nombre=o.alias;
     return o;
   });
 }
@@ -769,30 +838,34 @@ function tarifaChips(m){
 }
 function renderM(){
   const q=el("search").value.trim().toLowerCase();
-  const rows=data.filter(m=>!q||[m.alias,m.nombre,m.banco].some(v=>(v||"").toLowerCase().includes(q)));
+  const rows=data.filter(m=>!q||[m.nombre,m.alias,m.banco,m.cedula,m.telefono].some(v=>(v||"").toLowerCase().includes(q)));
   el("list").innerHTML = !rows.length
     ? `<div class="empty-state"><b>${data.length?"Sin resultados":"Aún no hay músicos"}</b>${data.length?"Prueba con otro término.":"Agrega tu primer músico."}</div>`
-    : rows.map(m=>`<div class="row">
-        <div class="who"><span class="alias">${esc(m.alias)}</span><span class="full">${esc(m.nombre||"")}</span></div>
+    : rows.map(m=>{
+        const prop=(m.estado==="propuesto");
+        return `<div class="row ${prop?'row-prop':''}">
+        <div class="who"><span class="alias">${esc(m.nombre||m.alias||"")}${prop?' <span class="prop-badge">PROPUESTO</span>':''}</span>${(m.cedula||m.telefono)?`<span class="full">${esc([m.cedula?('C.C. '+m.cedula):'',m.telefono?('📱 '+m.telefono):''].filter(Boolean).join('  ·  '))}</span>`:''}${prop?'<span class="prop-note">Propuesta del director · asígnale tarifa y aprueba</span>':''}</div>
         <div class="bank"><span class="name">${esc(m.banco||"—")}</span><span class="acct mono">${esc(m.cuenta||"—")}</span></div>
-        <div class="tarcell">${tarifaChips(m)}</div>
+        <div class="tarcell">${prop?`<button class="btn-approvecard" onclick="openEdit(${m.id})">Revisar y aprobar ›</button>`:tarifaChips(m)}</div>
         <div class="acts"><button class="icon-btn" onclick="openEdit(${m.id})">${penIco()}</button><button class="icon-btn del" onclick="askDelete(${m.id})">${trashIco()}</button></div>
-      </div>`).join("");
+      </div>`;}).join("");
   el("stTotal").textContent=data.length;
   el("stRate").textContent=data.filter(m=>m.formatos&&m.formatos.length&&m.formatos.every(f=>m.tarifas&&m.tarifas[f]!=null)).length;
   el("stBanks").textContent=new Set(data.map(m=>(m.banco||"").toLowerCase()).filter(Boolean)).size;
 }
-function openNew(){editId=null;el("modalTitle").textContent="Nuevo músico";el("btnDeleteInModal").style.display="none";setForm({});el("overlay").classList.add("open");el("fAlias").focus();}
-function openEdit(id){const m=data.find(x=>x.id===id);if(!m)return;editId=id;el("modalTitle").textContent="Editar músico";el("btnDeleteInModal").style.display="inline-flex";setForm(m);el("overlay").classList.add("open");}
+function openNew(){proposalMode=false;editId=null;el("modalTitle").textContent="Nuevo músico";el("btnDeleteInModal").style.display="none";el("btnApprove").style.display="none";el("proposeBanner").style.display="none";el("fmtLabel").innerHTML='Formatos y tarifas <span class="hint">(chulea el grupo y escribe su valor)</span>';el("btnSave").textContent="Guardar músico";setForm({});el("overlay").classList.add("open");el("fNombre").focus();}
+function openPropose(){proposalMode=true;editId=null;el("modalTitle").textContent="Proponer contratación";el("btnDeleteInModal").style.display="none";el("btnApprove").style.display="none";el("proposeBanner").style.display="block";el("fmtLabel").innerHTML='Grupos en los que tocaría <span class="hint">(sin precio)</span>';el("btnSave").textContent="Enviar propuesta";setForm({});el("overlay").classList.add("open");el("fNombre").focus();}
+function openEdit(id){const m=data.find(x=>x.id===id);if(!m)return;proposalMode=false;editId=id;const prop=(m.estado==="propuesto");el("modalTitle").textContent=prop?"Revisar propuesta de contratación":"Editar músico";el("btnDeleteInModal").style.display="inline-flex";el("proposeBanner").style.display=prop?"block":"none";if(prop)el("proposeBanner").innerHTML='<b>Propuesta del director.</b> Asígnale la tarifa de cada grupo y toca <b>Aprobar contratación</b> para dejarlo fijo en la lista.';el("fmtLabel").innerHTML='Formatos y tarifas <span class="hint">(chulea el grupo y escribe su valor)</span>';el("btnApprove").style.display=prop?"inline-flex":"none";el("btnSave").textContent="Guardar músico";setForm(m);el("overlay").classList.add("open");}
 let formSel=new Set();
 let formTarifas={};
+let proposalMode=false;
 function renderFmtPicker(){
   el("fmtPicker").innerHTML=FORMATOS.map((f,i)=>{const on=formSel.has(f);const c=FMT_COLORS[f];
     const val=(formTarifas[f]!=null)?Number(formTarifas[f]).toLocaleString("es-CO"):"";
     return `<div class="fmt-row ${on?'on':''}">
       <div class="fmt-opt ${on?'on':''}" style="${on?`background:${c}`:''}" onclick="toggleFmtOpt(${i})">
         <span class="tick">${on?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M20 6 9 17l-5-5"/></svg>':''}</span>${f}</div>
-      ${on?`<div class="fmt-rate"><span>$</span><input type="text" inputmode="numeric" placeholder="135.000" value="${val}" oninput="setTarifa(${i},this)"></div>`:''}
+      ${(on&&!proposalMode)?`<div class="fmt-rate"><span>$</span><input type="text" inputmode="numeric" placeholder="135.000" value="${val}" oninput="setTarifa(${i},this)"></div>`:''}
     </div>`;}).join("");
 }
 function toggleFmtOpt(i){ const f=FORMATOS[i]; if(formSel.has(f)){formSel.delete(f);delete formTarifas[f];} else {formSel.add(f);} renderFmtPicker(); }
@@ -800,20 +873,33 @@ function setTarifa(i,inp){ const f=FORMATOS[i]; const n=cleanNum(inp.value);
   if(n==null){delete formTarifas[f];inp.value="";return;}
   formTarifas[f]=n; inp.value=n.toLocaleString("es-CO");
   const L=inp.value.length; try{inp.setSelectionRange(L,L);}catch(e){} }
-function setForm(m){el("fAlias").value=m.alias||"";el("fNombre").value=m.nombre||"";el("fBanco").value=m.banco||"";el("fCuenta").value=m.cuenta||"";el("formErr").textContent="";formSel=new Set(m.formatos||[]);formTarifas=Object.assign({},m.tarifas||{});renderFmtPicker();}
+function setForm(m){el("fNombre").value=m.nombre||m.alias||"";el("fCedula").value=m.cedula||"";el("fTel").value=m.telefono||"";el("fBanco").value=m.banco||"";el("fCuenta").value=m.cuenta||"";el("formErr").textContent="";formSel=new Set(m.formatos||[]);formTarifas=Object.assign({},m.tarifas||{});renderFmtPicker();}
 function closeModal(){el("overlay").classList.remove("open");}
-function save(){
-  const alias=el("fAlias").value.trim();
-  if(!alias){el("formErr").textContent="El alias es obligatorio.";el("fAlias").focus();return;}
+function save(approve){
+  const nombre=el("fNombre").value.trim();
+  if(!nombre){el("formErr").textContent="El nombre es obligatorio.";el("fNombre").focus();return;}
   const fmts=[...formSel];
   const tarifas={}; fmts.forEach(f=>{ if(formTarifas[f]!=null) tarifas[f]=formTarifas[f]; });
+  // estado del registro
+  let estado;
+  if(proposalMode) estado="propuesto";
+  else if(approve===true) estado="activo";
+  else { const prev=editId?(data.find(x=>x.id===editId)||{}):{}; estado=prev.estado||"activo"; }
+  if(approve===true){
+    const faltan=fmts.filter(f=>tarifas[f]==null);
+    if(!fmts.length){ el("formErr").textContent="Marca al menos un grupo y asígnale tarifa antes de aprobar."; return; }
+    if(faltan.length){ el("formErr").textContent="Asigna la tarifa de: "+faltan.join(", ")+" antes de aprobar."; return; }
+  }
   const rec={
-    alias,
-    nombre:el("fNombre").value.trim(),
+    alias:nombre,
+    nombre,
+    cedula:el("fCedula").value.trim(),
+    telefono:el("fTel").value.trim(),
     banco:el("fBanco").value.trim(),
     cuenta:el("fCuenta").value.trim(),
     formatos:fmts,
     tarifas,
+    estado,
     updatedAt:Date.now()
   };
   let toSave;
@@ -825,12 +911,15 @@ function save(){
     toSave={id:nextId(),...rec};
     data.push(toSave);
   }
-  lsSaveM();          /* guardar local SIEMPRE — nunca falla */
-  renderM();
+  lsSaveM();
+  if(typeof renderM==="function" && document.getElementById("list")) renderM();
   closeModal();
-  toast("✅ Guardado correctamente");
-  fsSync(toSave);     /* sincronizar Firebase en segundo plano */
+  if(proposalMode) toast("✅ Propuesta enviada al administrador");
+  else if(approve===true) toast("✅ Contratación aprobada");
+  else toast("✅ Guardado correctamente");
+  fsSync(toSave);
 }
+function approveHire(){ save(true); }
 function askDelete(id){const m=data.find(x=>x.id===id);if(!m)return;if(confirm(`¿Eliminar a ${m.alias}? No se puede deshacer.`)){deleteMusicoDoc(id);renderM();toast("Músico eliminado");}}
 function exportData(){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="musicos-tarima.json";a.click();URL.revokeObjectURL(a.href);toast("Respaldo descargado");}
 function renderCloudBar(){
@@ -991,7 +1080,7 @@ function presBlock(p,pi){
   if(!fmt){
     body=`<div class="pick-empty">Elige el grupo de esta presentación.</div>`;
   } else {
-    const inFmt=data.filter(m=>(m.formatos||[]).includes(fmt));
+    const inFmt=data.filter(m=>(m.formatos||[]).includes(fmt)&&m.estado!=="propuesto");
     const inFmtIds=new Set(inFmt.map(m=>m.id));
     const extras=data.filter(m=>p.ids.includes(m.id)&&!inFmtIds.has(m.id)); // reemplazos
     const visibles=inFmt.concat(extras);
@@ -1017,7 +1106,7 @@ function presBlock(p,pi){
     repBtn=`<button class="addrep" onclick="toggleReplace(${pi})">+ Agregar reemplazo</button>`;
     if(replaceOpenFor===pi){
       const shown=new Set(visibles.map(m=>m.id));
-      const cands=data.filter(m=>!shown.has(m.id)).sort((a,b)=>(a.alias||'').localeCompare(b.alias||''));
+      const cands=data.filter(m=>!shown.has(m.id)&&m.estado!=="propuesto").sort((a,b)=>(a.alias||'').localeCompare(b.alias||''));
       repPanel=`<div class="rep-panel">
         <div class="rep-title">Elige un reemplazo de toda la lista:</div>
         ${cands.length?cands.map(m=>`<div class="rep-opt" onclick="addReplace(${pi},${m.id})"><b>${esc(m.alias)}</b><small>${esc(m.nombre||'')}</small></div>`).join(""):'<div class="rep-empty">No hay más músicos para agregar.</div>'}
@@ -1257,7 +1346,13 @@ el("btnToday").onclick=()=>{curMonday=mondayOf(new Date());replaceOpenFor=null;r
 el("weekPick").onchange=e=>{if(e.target.value){const[y,mo,d]=e.target.value.split('-').map(Number);curMonday=mondayOf(new Date(y,mo-1,d));replaceOpenFor=null;renderWeek();}};
 
 /* listeners */
-el("btnNew").onclick=openNew;el("btnClose").onclick=closeModal;el("btnCancel").onclick=closeModal;el("btnSave").onclick=save;
+el("btnNew").onclick=openNew;el("btnClose").onclick=closeModal;el("btnCancel").onclick=closeModal;el("btnSave").onclick=()=>save();
+el("btnApprove").onclick=approveHire;
+el("goPropose").onclick=openPropose;
+el("musPrev").onclick=()=>{curMonday=addDays(curMonday,-7);renderMusicoReport();};
+el("musNext").onclick=()=>{curMonday=addDays(curMonday,7);renderMusicoReport();};
+el("musToday").onclick=()=>{curMonday=mondayOf(new Date());renderMusicoReport();};
+el("musLogout").onclick=logout;
 el("btnDeleteInModal").onclick=()=>{if(editId){askDelete(editId);closeModal();}};
 el("search").addEventListener("input",renderM);
 el("btnExport").onclick=exportData;el("btnImport").onclick=()=>el("fileImport").click();
@@ -1277,7 +1372,7 @@ const USERS=[
 ];
 let currentUser=null;
 function showScreen(name){
-  ["login","home","app"].forEach(s=>el("screen-"+s).classList.toggle("active",s===name));
+  ["login","home","musico","app"].forEach(s=>el("screen-"+s).classList.toggle("active",s===name));
   window.scrollTo(0,0);
 }
 function applyRole(){
@@ -1294,10 +1389,57 @@ function entrar(){
     el("usr").value=""; el("pwd").value="";
     el("homeHi").textContent="Hola, "+found.nombre+". ¿Qué vas a hacer hoy?";
     showScreen("home");
-  } else {
-    el("loginErr").textContent="Usuario o contraseña incorrectos.";
-    el("pwd").select();
+    return;
   }
+  // Acceso de músico: usuario = cédula, contraseña = teléfono (WhatsApp)
+  const dig=s=>String(s||"").replace(/\D/g,"");
+  const mus=data.find(m=>m.estado!=="propuesto" && dig(m.cedula) && dig(m.cedula)===dig(u) && dig(m.telefono) && dig(m.telefono)===dig(p));
+  if(mus){
+    currentUser={rol:"musico",musicoId:mus.id,nombre:mus.nombre||mus.alias};
+    applyRole();
+    el("loginErr").textContent=""; el("usr").value=""; el("pwd").value="";
+    curMonday=mondayOf(new Date());
+    renderMusicoReport();
+    showScreen("musico");
+    return;
+  }
+  el("loginErr").textContent="Usuario o contraseña incorrectos.";
+  el("pwd").select();
+}
+function renderMusicoReport(){
+  if(!currentUser||currentUser.rol!=="musico")return;
+  const m=data.find(x=>x.id===currentUser.musicoId);
+  if(!m){ logout(); return; }
+  el("musHi").textContent="Hola, "+(m.nombre||m.alias);
+  const sun7=addDays(curMonday,6);
+  el("musRange").textContent=cap(fmt(curMonday,{day:'numeric',month:'short'}))+" — "+fmt(sun7,{day:'numeric',month:'short',year:'numeric'});
+  const wk=weeks[keyOf(curMonday)];
+  let html="", base=0, pend=0;
+  if(wk){
+    wk.days.forEach((day,di)=>{
+      const mine=day.pres.filter(s=>s.fmt && s.ids.includes(m.id));
+      if(!mine.length) return;
+      const items=mine.map(s=>{
+        const r=effRate(s,m,s.fmt); const val=(r!=null?r:0);
+        const ok=(s.status==="aprobada");
+        if(ok) base+=val; else pend++;
+        return `<div class="mr-item">
+          <span class="mr-grp" style="background:${(FMT_COLORS[s.fmt]||'#888')}1f;color:${FMT_COLORS[s.fmt]||'#555'}">${esc(s.fmt)}</span>
+          <span class="mr-when">${s.hora?s.hora:'—'}</span>
+          <span class="mr-val">${ok?cop(val):'<span class="mr-tag">por confirmar</span>'}</span>
+        </div>`;
+      }).join("");
+      html+=`<div class="mr-day"><div class="mr-day-h">${cap(fmt(addDays(curMonday,di),{weekday:'long',day:'numeric',month:'long'}))}</div>${items}</div>`;
+    });
+  }
+  el("musBody").innerHTML=html||`<div class="liq-empty">No tienes presentaciones registradas esta semana.</div>`;
+  const ex=(wk&&wk.extra&&wk.extra[m.id])?wk.extra[m.id]:{bono:0,desc:0};
+  let extraLine="";
+  if(ex.bono) extraLine+=`<div class="mr-extra-line">Bono: +${cop(ex.bono)}</div>`;
+  if(ex.desc) extraLine+=`<div class="mr-extra-line">Descuento: −${cop(ex.desc)}</div>`;
+  el("musExtra").innerHTML=extraLine;
+  el("musTot").textContent=cop(base+(ex.bono||0)-(ex.desc||0));
+  el("musPendNote").style.display=pend>0?"block":"none";
 }
 function logout(){ currentUser=null; document.body.dataset.rol=""; showScreen("login"); }
 function abrirModulo(view){
