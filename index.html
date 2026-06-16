@@ -242,6 +242,8 @@
   body[data-rol="musico"] .grp-mus{display:block}
   .conta-btn{display:none}
   body[data-rol="admin"] .conta-btn{display:flex}
+  .bancos-btn{display:none}
+  body[data-rol="admin"] .bancos-btn{display:flex}
   .menu-group+.menu-group{margin-top:22px}
   .menu-group-h{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 4px 11px;display:flex;align-items:center;gap:9px}
   .menu-group-h::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -554,7 +556,7 @@
             <span class="mc-txt"><b>Validación de pagos</b><small>Autorizar transferencias a músicos</small></span>
             <span class="mc-arrow">›</span>
           </button>
-          <button class="menu-card conta-btn" id="goBancos">
+          <button class="menu-card bancos-btn" id="goBancos">
             <span class="mc-ico" style="background:linear-gradient(135deg,#5B6CB0,#404f8f)">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>
             </span>
@@ -2335,7 +2337,7 @@ function renderContabilidad(){
     if(!item.pagado){
       botonesHtml = `<span style="font-size:.78rem;color:var(--amber-deep);font-weight:700;font-style:italic">Pendiente de pago por Bancos</span>`;
     } else if(!waSent){
-      botonesHtml = `<button class="btn-pagar-uno btn-wa" onclick="abrirWA(${item.id})">📱 Enviar WhatsApp</button>`;
+      botonesHtml = `<button class="btn-pagar-uno btn-wa" onclick="abrirWA(${item.id})">📱 WhatsApp</button>`;
     } else {
       botonesHtml = `<button class="btn-pagar-uno pagado-btn" disabled>WA enviado ✓</button>`;
     }
