@@ -665,10 +665,38 @@
     </div>
   </section>
 
-  <!-- ============ PANTALLA: CONTABILIDAD ============ -->
+  <!-- ============ PANTALLA: MENÚ CONTABILIDAD ============ -->
   <section class="screen" id="screen-conta">
+    <div class="conta-wrap" style="justify-content:center;min-height:100svh">
+      <div class="conta-top" style="margin-bottom:10px">
+        <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">CONTABILIDAD</span></div>
+        <p class="home-hi" style="margin:6px 0 0">¿Qué vas a hacer hoy?</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;margin-top:10px">
+        <button class="menu-card" id="goContaValidar" style="background:#fff;border:1.5px solid #e7e4da;border-radius:14px;box-shadow:0 1px 2px rgba(20,21,26,.04),0 8px 24px rgba(20,21,26,.06);padding:18px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;text-align:left">
+          <span class="mc-ico" style="background:linear-gradient(135deg,#3E8E6E,#2c6b52);width:52px;height:52px;border-radius:14px;display:grid;place-items:center;flex:none">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M7 15h3M14 15h3"/></svg>
+          </span>
+          <span class="mc-txt"><b>Validación de pagos</b><small>Ver estado, enviar WhatsApp a músicos y generar reporte</small></span>
+          <span class="mc-arrow" style="font-size:22px;color:#C2832A;font-weight:700">›</span>
+        </button>
+        <button class="menu-card" id="goContaBancos" style="background:#fff;border:1.5px solid #e7e4da;border-radius:14px;box-shadow:0 1px 2px rgba(20,21,26,.04),0 8px 24px rgba(20,21,26,.06);padding:18px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;text-align:left">
+          <span class="mc-ico" style="background:linear-gradient(135deg,#5B6CB0,#404f8f);width:52px;height:52px;border-radius:14px;display:grid;place-items:center;flex:none">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>
+          </span>
+          <span class="mc-txt"><b>Pago por Bancos</b><small>Procesar y marcar transferencias una por una</small></span>
+          <span class="mc-arrow" style="font-size:22px;color:#C2832A;font-weight:700">›</span>
+        </button>
+      </div>
+      <button class="home-lock" id="contaMenuLogout" style="margin-top:auto">Cerrar sesión</button>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA: CONTABILIDAD — VALIDACIÓN ============ -->
+  <section class="screen" id="screen-conta-validar">
     <div class="conta-wrap">
       <div class="conta-top">
+        <button id="contaValidarBack" style="background:none;border:none;color:var(--amber-deep);font-weight:700;font-size:14px;cursor:pointer;padding:0 0 10px;text-align:left">‹ Contabilidad</button>
         <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">CONTABILIDAD</span></div>
         <p class="home-hi" id="contaHi">Validación de pagos</p>
       </div>
@@ -680,6 +708,7 @@
       <button id="contaToday" class="mus-today">Esta semana</button>
       <div class="conta-actions" id="contaActions" style="display:none">
         <button class="btn btn-primary" id="contaWABloque" style="background:#25D366;color:#fff" onclick="enviarWABloque()">📱 WhatsApp a pagados</button>
+        <button class="btn btn-primary" id="contaReporte" style="background:var(--ink);color:#fff" onclick="generarReporteImagen()">📄 Guardar reporte</button>
       </div>
       <div class="conta-body" id="contaBody"></div>
       <div class="conta-total-bar">
@@ -691,9 +720,10 @@
   </section>
 
   <!-- ============ PANTALLA: PAGO POR BANCOS ============ -->
-  <section class="screen" id="screen-bancos">
+  <section class="screen" id="screen-conta-bancos">
     <div class="conta-wrap">
       <div class="conta-top">
+        <button id="bancosBack" style="background:none;border:none;color:var(--amber-deep);font-weight:700;font-size:14px;cursor:pointer;padding:0 0 10px;text-align:left">‹ Contabilidad</button>
         <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">PAGO POR BANCOS</span></div>
         <p class="home-hi" id="bancosHi">Procesar pagos uno por uno</p>
       </div>
@@ -1905,12 +1935,11 @@ let USERS=[
   {u:"admin",        p:"matriarca",  rol:"admin",        nombre:"Administrador"},
   {u:"director",     p:"director",   rol:"director",     nombre:"Director musical"},
   {u:"contabilidad", p:"conta2024",  rol:"contabilidad", nombre:"Contabilidad"},
-  {u:"bancos",       p:"bancos2024", rol:"bancos",       nombre:"Pago por Bancos"},
 ];
 let currentUser=null;
 let activeMusicoId=null;
 function showScreen(name){
-  ["login","home","musico","app","conta","validar","bancos"].forEach(s=>el("screen-"+s).classList.toggle("active",s===name));
+  ["login","home","musico","app","conta","conta-validar","conta-bancos","validar","bancos"].forEach(s=>{ const e=el("screen-"+s); if(e) e.classList.toggle("active",s===name); });
   window.scrollTo(0,0);
 }
 function applyRole(){
@@ -1929,8 +1958,6 @@ function entrar(){
     el("homeHi").textContent="Hola, "+found.nombre+". ¿Qué vas a hacer hoy?";
     /* contabilidad va directo a su módulo */
     if(found.rol==="contabilidad"){ showContaScreen(); return; }
-    /* bancos va directo a su módulo */
-    if(found.rol==="bancos"){ showBancosScreen(); return; }
     showScreen("home");
     return;
   }
@@ -2236,10 +2263,19 @@ let contaWeekMonday = mondayOf(new Date());
 let contaSelectedIds = new Set();
 
 function showContaScreen(){
+  showScreen("conta");
+}
+function showContaValidar(){
   contaWeekMonday = mondayOf(new Date());
   contaSelectedIds = new Set();
   renderContabilidad();
-  showScreen("conta");
+  showScreen("conta-validar");
+}
+function showContaBancos(){
+  bancosWeekMonday = mondayOf(new Date());
+  bancosSelectedIds = new Set();
+  renderBancos();
+  showScreen("conta-bancos");
 }
 
 function computeContaPagos(weekMonday){
@@ -2531,6 +2567,7 @@ el("contaPrev").onclick=()=>{contaWeekMonday=addDays(contaWeekMonday,-7);contaSe
 el("contaNext").onclick=()=>{contaWeekMonday=addDays(contaWeekMonday,7);contaSelectedIds=new Set();renderContabilidad();};
 el("contaToday").onclick=()=>{contaWeekMonday=mondayOf(new Date());contaSelectedIds=new Set();renderContabilidad();};
 el("contaLogout").onclick=logout;
+el("contaValidarBack").onclick=showContaScreen;
 el("goContabilidad").onclick=showContaScreen;
 
 
@@ -2663,18 +2700,80 @@ function openUserEditorConta(){
   el("userOverlay").classList.add("open");
 }
 
+/* ── Generar reporte como imagen descargable ── */
+function generarReporteImagen(){
+  const lista = computeContaPagos();
+  if(!lista.length){ toast("No hay pagos para generar reporte"); return; }
+
+  const sun7 = addDays(contaWeekMonday,6);
+  const semanaStr = cap(fmt(contaWeekMonday,{day:'numeric',month:'long'})) + " — " + fmt(sun7,{day:'numeric',month:'short',year:'numeric'});
+  const k = keyOf(contaWeekMonday);
+  const wk = weeks[k]||{extra:{}};
+
+  const totalGen = lista.reduce((s,x)=>s+x.total,0);
+  const nPagados = lista.filter(x=>x.pagado).length;
+
+  /* Construir HTML del reporte */
+  const filas = lista.map(item=>{
+    const ex=(wk.extra&&wk.extra[item.id])||{};
+    const estado = item.pagado
+      ? `<span style="color:#3E8E6E;font-weight:700">✅ Pagado${item.pagadoAt?' · '+fmtDate(item.pagadoAt):''}</span>`
+      : `<span style="color:#C2832A;font-weight:700">⏳ Pendiente</span>`;
+    const wa = ex.waSent
+      ? `<span style="color:#25D366;font-size:11px;font-weight:600">📱 WA enviado</span>` : '';
+    return `<tr style="border-bottom:1px solid #e7e4da">
+      <td style="padding:10px 12px;font-weight:700;color:#1A1B1E">${esc(item.m.alias||item.m.nombre)}</td>
+      <td style="padding:10px 12px;font-size:12px;color:#73757E">${esc(item.m.banco||'—')} · ${esc(item.m.cuenta||'—')}</td>
+      <td style="padding:10px 12px;font-weight:800;color:#C2832A;text-align:right">${cop(item.total)}</td>
+      <td style="padding:10px 12px;text-align:center">${estado}<br>${wa}</td>
+    </tr>`;
+  }).join("");
+
+  const html = `<div style="font-family:-apple-system,system-ui,sans-serif;background:#F5F3EC;padding:28px;min-width:600px">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.15em;color:#73757E;text-transform:uppercase">ORQUESTA MATRIARCA</div>
+      <div style="font-size:28px;font-weight:900;color:#1A1B1E;margin:4px 0">REPORTE DE PAGOS</div>
+      <div style="font-size:13px;color:#73757E;font-weight:600">${semanaStr}</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(20,21,26,.06)">
+      <thead>
+        <tr style="background:#1A1B1E;color:#fff">
+          <th style="padding:12px;text-align:left;font-size:12px;letter-spacing:.06em">MÚSICO</th>
+          <th style="padding:12px;text-align:left;font-size:12px;letter-spacing:.06em">BANCO / CUENTA</th>
+          <th style="padding:12px;text-align:right;font-size:12px;letter-spacing:.06em">MONTO</th>
+          <th style="padding:12px;text-align:center;font-size:12px;letter-spacing:.06em">ESTADO</th>
+        </tr>
+      </thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#1A1B1E;color:#fff;border-radius:12px;padding:16px 20px;margin-top:14px">
+      <div style="font-size:13px;color:#9A9CA6">${nPagados} de ${lista.length} pagados · Generado ${new Date().toLocaleString('es-CO')}</div>
+      <div style="font-size:22px;font-weight:900;color:#E0A23B">${cop(totalGen)}</div>
+    </div>
+  </div>`;
+
+  /* Abrir en nueva ventana para que el usuario lo guarde/imprima como imagen o PDF */
+  const win = window.open('','_blank');
+  if(!win){ toast("Activa las ventanas emergentes para guardar el reporte"); return; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte Contabilidad</title>
+    <style>*{box-sizing:border-box}body{margin:0;background:#F5F3EC}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+    </style></head><body>${html}
+    <div style="text-align:center;padding:16px;font-size:12px;color:#73757E">
+      Toca <b>Compartir → Imprimir</b> para guardar como PDF, o mantén presionada la pantalla para guardar como imagen.
+    </div>
+    <script>setTimeout(()=>window.print(),400)<\/script>
+    </body></html>`);
+  win.document.close();
+}
+
 /* ============ FIN MÓDULO CONTABILIDAD ============ */
 
 /* ============ MÓDULO PAGO POR BANCOS ============ */
 let bancosWeekMonday = mondayOf(new Date());
 let bancosSelectedIds = new Set();
 
-function showBancosScreen(){
-  bancosWeekMonday = mondayOf(new Date());
-  bancosSelectedIds = new Set();
-  renderBancos();
-  showScreen("bancos");
-}
+/* showBancosScreen → reemplazado por showContaBancos */
 
 function renderBancos(){
   const sun7 = addDays(bancosWeekMonday,6);
@@ -2772,7 +2871,11 @@ el("bancosPrev").onclick=()=>{bancosWeekMonday=addDays(bancosWeekMonday,-7);banc
 el("bancosNext").onclick=()=>{bancosWeekMonday=addDays(bancosWeekMonday,7);bancosSelectedIds=new Set();renderBancos();};
 el("bancosToday").onclick=()=>{bancosWeekMonday=mondayOf(new Date());bancosSelectedIds=new Set();renderBancos();};
 el("bancosLogout").onclick=logout;
-el("goBancos").onclick=showBancosScreen;
+el("bancosBack").onclick=showContaScreen;
+el("contaMenuLogout").onclick=logout;
+el("goContaValidar").onclick=showContaValidar;
+el("goContaBancos").onclick=showContaBancos;
+if(el("goBancos")) el("goBancos").onclick=showContaBancos;
 
 /* ============ FIN MÓDULO PAGO POR BANCOS ============ */
 
