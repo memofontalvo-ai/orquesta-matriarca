@@ -2309,12 +2309,52 @@ function toggleContaSel(id){
 /* ── Genera el mensaje de WhatsApp para un músico ── */
 function buildWAMsg(item){
   const sun7 = addDays(contaWeekMonday,6);
-  const semana = cap(fmt(contaWeekMonday,{day:'numeric',month:'long'})) + " al " + fmt(sun7,{day:'numeric',month:'long',year:'numeric'});
+  const semanaStr = cap(fmt(contaWeekMonday,{day:'numeric',month:'long'})) + " al " + fmt(sun7,{day:'numeric',month:'long',year:'numeric'});
   const nombre = item.m.nombre||item.m.alias;
   const banco  = item.m.banco||'';
   const cuenta = item.m.cuenta||'';
-  const monto  = cop(item.total);
-  return `Hola ${nombre}, te informamos que tu pago de *${monto}* correspondiente a la semana del ${semana} fue procesado a tu cuenta *${banco} ${cuenta}*. ¡Gracias!`;
+
+  /* Recoger presentaciones de la semana para este músico */
+  const k = keyOf(contaWeekMonday);
+  const wk = weeks[k];
+  const ex = (wk&&wk.extra&&wk.extra[item.id]) ? wk.extra[item.id] : {bono:0,desc:0};
+  const bono = ex.bono||0;
+  const desc = ex.desc||0;
+
+  /* Líneas de presentaciones */
+  let presLines = [];
+  let subtotal = 0;
+  if(wk){
+    wk.days.forEach((day,di)=>{
+      const mine = day.pres.filter(p=>p.fmt && p.status==="aprobada" && p.ids.includes(item.id));
+      if(!mine.length) return;
+      const fecha = fmt(addDays(contaWeekMonday,di),{weekday:'short',day:'numeric',month:'short'});
+      mine.forEach(p=>{
+        const r = effRate(p,item.m,p.fmt);
+        const val = (r!=null?r:0);
+        subtotal += val;
+        const hora = p.hora ? p.hora.replace(':','h') : '';
+        presLines.push(`📅 ${cap(fecha)}${hora?' · '+hora:''} · ${p.fmt} · ${cop(val)}`);
+      });
+    });
+  }
+
+  /* Resumen financiero */
+  let resumen = `Subtotal ${cop(subtotal)}`;
+  if(bono)  resumen += ` · Bono +${cop(bono)}`;
+  if(desc)  resumen += ` · Descuento -${cop(desc)}`;
+  const total = subtotal + bono - desc;
+
+  /* Armar mensaje */
+  let msg = `🎵 *ORQUESTA MATRIARCA*\n`;
+  msg += `Liquidación del ${semanaStr}\n\n`;
+  msg += `Hola ${nombre}, tu reporte de pago:\n\n`;
+  msg += presLines.join('\n') + '\n\n';
+  msg += resumen + '\n';
+  msg += `*Total pagado: ${cop(total)}* ✅\n\n`;
+  msg += `🏦 ${banco} · ${cuenta}`;
+
+  return msg;
 }
 
 /* ── Abre WhatsApp y marca el envío ── */
