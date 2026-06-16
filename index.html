@@ -483,6 +483,8 @@
   .btn-pagar-uno{margin-left:auto;background:var(--amber);color:#1A1B1E;font-weight:700;font-size:.82rem;padding:6px 16px;border-radius:8px;border:none;cursor:pointer;transition:background .15s}
   .btn-pagar-uno:hover{background:var(--amber-deep);color:#fff}
   .btn-pagar-uno.pagado-btn{background:var(--ok);color:#fff;cursor:default}
+  .btn-pagar-uno.btn-wa{background:#25D366;color:#fff}
+  .btn-pagar-uno.btn-wa:hover{background:#1ebe5a}
   .conta-empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:.95rem;line-height:1.6}
   .conta-pend-note{background:#fff8ed;border:1px solid var(--amber);border-radius:10px;padding:12px 16px;font-size:.85rem;color:var(--amber-deep);text-align:center}
 
@@ -641,6 +643,7 @@
       <div class="conta-actions" id="contaActions" style="display:none">
         <button class="btn btn-primary" id="contaSelectAll" style="background:#3E8E6E">☑ Seleccionar todos</button>
         <button class="btn btn-primary" id="contaPaySelected" style="background:#E0A23B;color:#1A1B1E">Pagar seleccionados</button>
+        <button class="btn btn-primary" id="contaWABloque" style="background:#25D366;color:#fff" onclick="enviarWABloque()">📱 WhatsApp a pagados</button>
       </div>
       <div class="conta-body" id="contaBody"></div>
       <div class="conta-total-bar">
@@ -2238,9 +2241,23 @@ function renderContabilidad(){
   }
 
   const renderCard = (item)=>{
+    const k=keyOf(contaWeekMonday);
+    const wk=weeks[k]||{extra:{}};
+    const ex=(wk.extra&&wk.extra[item.id])||{};
+    const waSent = !!(ex.waSent);
+    const waSentDate = ex.waSentAt ? ` · ${fmtDate(ex.waSentAt)}` : "";
     const sel = contaSelectedIds.has(item.id);
     const chk = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>`;
     const pagoFecha = item.pagadoAt ? ` · ${fmtDate(item.pagadoAt)}` : "";
+    /* Botones según estado */
+    let botonesHtml = "";
+    if(!item.pagado){
+      botonesHtml = `<button class="btn-pagar-uno" onclick="pagarUno(${item.id})">Pagar ✓</button>`;
+    } else if(!waSent){
+      botonesHtml = `<button class="btn-pagar-uno btn-wa" onclick="abrirWA(${item.id})">📱 Enviar WhatsApp</button>`;
+    } else {
+      botonesHtml = `<button class="btn-pagar-uno pagado-btn" disabled>WA enviado ✓</button>`;
+    }
     return `<div class="conta-card ${sel?'selected':''} ${item.pagado?'pagado':''}" id="ccrd-${item.id}">
       <div class="conta-card-head" onclick="${item.pagado?'':('toggleContaSel('+item.id+')')}">
         <div class="conta-check">${chk}</div>
@@ -2255,15 +2272,19 @@ function renderContabilidad(){
         <div class="conta-banco-row">
           <span class="conta-banco-tag">${esc(item.m.banco||'—')}</span>
           ${item.m.cedula?`<span>C.C. ${esc(item.m.cedula)}</span>`:''}
+          ${item.m.telefono?`<span>📱 ${esc(item.m.telefono)}</span>`:''}
         </div>
       </div>
       <div class="conta-status-bar">
-        ${item.pagado
-          ? `<span class="conta-status-pagado">✓ Pagado${pagoFecha}</span>`
-          : `<span class="conta-status-pendiente">${item.musOk?'✓ Aprobado por músico':'⏳ Sin aprobar aún'} · Pendiente de pago</span>`}
-        ${!item.pagado
-          ? `<button class="btn-pagar-uno" onclick="pagarUno(${item.id})">Pagar ✓</button>`
-          : `<button class="btn-pagar-uno pagado-btn" disabled>Pagado ✓</button>`}
+        <div style="display:flex;flex-direction:column;gap:3px;flex:1">
+          ${item.pagado
+            ? `<span class="conta-status-pagado">✓ Pagado${pagoFecha}</span>`
+            : `<span class="conta-status-pendiente">${item.musOk?'✓ Aprobado por músico':'⏳ Sin aprobar aún'} · Pendiente de pago</span>`}
+          ${waSent
+            ? `<span style="font-size:.78rem;color:#3E8E6E;font-weight:600">📱 WhatsApp enviado${waSentDate}</span>`
+            : item.pagado ? `<span style="font-size:.78rem;color:#C2832A;font-weight:600">⚠ WhatsApp pendiente de enviar</span>` : ''}
+        </div>
+        ${botonesHtml}
       </div>
     </div>`;
   };
@@ -2285,6 +2306,39 @@ function toggleContaSel(id){
   renderContabilidad();
 }
 
+/* ── Genera el mensaje de WhatsApp para un músico ── */
+function buildWAMsg(item){
+  const sun7 = addDays(contaWeekMonday,6);
+  const semana = cap(fmt(contaWeekMonday,{day:'numeric',month:'long'})) + " al " + fmt(sun7,{day:'numeric',month:'long',year:'numeric'});
+  const nombre = item.m.nombre||item.m.alias;
+  const banco  = item.m.banco||'';
+  const cuenta = item.m.cuenta||'';
+  const monto  = cop(item.total);
+  return `Hola ${nombre}, te informamos que tu pago de *${monto}* correspondiente a la semana del ${semana} fue procesado a tu cuenta *${banco} ${cuenta}*. ¡Gracias!`;
+}
+
+/* ── Abre WhatsApp y marca el envío ── */
+function abrirWA(id){
+  const lista = computeContaPagos();
+  const item = lista.find(x=>x.id===id); if(!item) return;
+  const tel = String(item.m.telefono||"").replace(/\D/g,"");
+  const msg = encodeURIComponent(buildWAMsg(item));
+  const url = tel ? `https://wa.me/57${tel}?text=${msg}` : `https://wa.me/?text=${msg}`;
+
+  /* Marcar como WA enviado */
+  const k=keyOf(contaWeekMonday);
+  const wk=weeks[k]; if(!wk) return;
+  wk.extra=wk.extra||{};
+  wk.extra[id]=wk.extra[id]||{bono:0,desc:0};
+  wk.extra[id].waSent=true;
+  wk.extra[id].waSentAt=Date.now();
+  persistW();
+  renderContabilidad();
+
+  window.open(url,"_blank");
+}
+
+/* ── Pagar uno + abrir WhatsApp ── */
 function pagarUno(id){
   const k=keyOf(contaWeekMonday);
   const wk=weeks[k]; if(!wk) return;
@@ -2296,9 +2350,10 @@ function pagarUno(id){
   contaSelectedIds.delete(id);
   renderContabilidad();
   const m=data.find(x=>x.id===id);
-  toast("✓ Pago registrado: "+(m?m.alias:id));
+  toast("✓ Pago registrado: "+(m?m.alias:id)+" — ahora envía el WhatsApp");
 }
 
+/* ── Pagar seleccionados ── */
 function pagarSeleccionados(){
   if(!contaSelectedIds.size){ toast("Selecciona al menos un músico"); return; }
   const ids=[...contaSelectedIds];
@@ -2314,7 +2369,39 @@ function pagarSeleccionados(){
   persistW();
   contaSelectedIds=new Set();
   renderContabilidad();
-  toast("✓ "+ids.length+" pago"+(ids.length===1?"":"s")+" registrado"+(ids.length===1?"":"s"));
+  toast("✓ "+ids.length+" pago"+(ids.length===1?"":"s")+" registrado"+(ids.length===1?"":"s")+" — ahora envía los WhatsApp");
+}
+
+/* ── Enviar WhatsApp a todos los pagados sin notificar aún ── */
+let _waBloqueIdx=0, _waBloqueIds=[];
+function enviarWABloque(){
+  const lista = computeContaPagos();
+  /* pagados pero sin WA enviado */
+  const k=keyOf(contaWeekMonday);
+  const wk=weeks[k]||{extra:{}};
+  _waBloqueIds = lista.filter(x=>{
+    const ex=(wk.extra&&wk.extra[x.id])||{};
+    return x.pagado && !ex.waSent;
+  }).map(x=>x.id);
+  if(!_waBloqueIds.length){ toast("Todos los pagados ya tienen WhatsApp enviado"); return; }
+  _waBloqueIdx=0;
+  enviarSiguienteWA();
+}
+function enviarSiguienteWA(){
+  if(_waBloqueIdx>=_waBloqueIds.length){
+    toast("✓ WhatsApp enviado a "+_waBloqueIds.length+" músico"+(+_waBloqueIds.length===1?"":"s"));
+    return;
+  }
+  const id=_waBloqueIds[_waBloqueIdx];
+  _waBloqueIdx++;
+  abrirWA(id);
+  if(_waBloqueIdx<_waBloqueIds.length){
+    setTimeout(()=>{
+      if(confirm("WhatsApp enviado. ¿Abrir el siguiente? ("+_waBloqueIdx+" de "+_waBloqueIds.length+")")){
+        enviarSiguienteWA();
+      }
+    }, 1200);
+  }
 }
 
 el("contaPrev").onclick=()=>{contaWeekMonday=addDays(contaWeekMonday,-7);contaSelectedIds=new Set();renderContabilidad();};
