@@ -284,6 +284,8 @@
   .me-lock-sub{font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px;padding-top:9px;border-top:1px dashed var(--line)}
   .pickmus-search{width:100%;padding:13px 15px;border:1px solid var(--line-strong);border-radius:11px;font-size:15px;margin-bottom:12px}
   .pickmus-list{max-height:54vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+  .pickmus-bulk{width:100%;text-align:center;padding:13px;border:1.5px solid var(--amber);border-radius:12px;background:rgba(212,160,60,.14);color:var(--amber-deep);font-size:14px;font-weight:800;cursor:pointer;margin-bottom:4px}
+  .pickmus-bulk:active{transform:scale(.99)}
   .pickmus-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff;cursor:pointer}
   .pickmus-row:hover{border-color:var(--amber);background:rgba(224,162,59,.06)}
   .pickmus-row b{font-size:15px;color:var(--ink)}
@@ -472,7 +474,7 @@
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
       <div class="login-hint">Músicos: si el administrador no te ha dado un usuario, tu <b>usuario</b> es tu cédula y tu <b>contraseña</b> es tu teléfono.</div>
-      <div class="app-version">v3.12 · Orquesta Matriarca</div>
+      <div class="app-version">v3.13 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -1801,22 +1803,45 @@ function entrar(){
   el("pwd").select();
 }
 let pickMusCb=null;
-function pickMusico(cb){ pickMusCb=cb; el("pickMusSearch").value=""; renderPickMus(); el("pickMusOverlay").classList.add("open"); setTimeout(()=>{try{el("pickMusSearch").focus();}catch(e){}},50); }
+let pickMusBulk=false;
+function pickMusico(cb,opts){ pickMusCb=cb; pickMusBulk=!!(opts&&opts.bulk); el("pickMusSearch").value=""; renderPickMus(); el("pickMusOverlay").classList.add("open"); setTimeout(()=>{try{el("pickMusSearch").focus();}catch(e){}},50); }
 function renderPickMus(){
   const q=(el("pickMusSearch").value||"").trim().toLowerCase();
   const rows=data.filter(m=>m.estado!=="propuesto")
     .filter(m=>!q||[m.nombre,m.alias,m.cedula].some(v=>(v||"").toLowerCase().includes(q)))
     .sort((a,b)=>(a.nombre||a.alias||"").localeCompare(b.nombre||b.alias||""));
-  el("pickMusList").innerHTML=rows.length
+  const bulkBtn=pickMusBulk?`<button class="pickmus-bulk" onclick="bulkDefaultCreds()">⚡ Asignar usuario y clave por defecto a todos</button>`:"";
+  el("pickMusList").innerHTML=bulkBtn+(rows.length
     ? rows.map(m=>`<button class="pickmus-row" onclick="choosePickMus(${m.id})"><b>${esc(m.nombre||m.alias)}</b>${m.cedula?`<small>C.C. ${esc(m.cedula)}</small>`:''}</button>`).join("")
-    : `<div class="liq-empty">Sin músicos.</div>`;
+    : `<div class="liq-empty">Sin músicos.</div>`);
+}
+function firstName(full){ return String(full||"").trim().split(/\s+/)[0]||""; }
+function normUser(x){ return String(x||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,""); }
+function bulkDefaultCreds(){
+  const activos=data.filter(m=>m.estado!=="propuesto");
+  if(!activos.length){ toast("No hay músicos."); return; }
+  if(!confirm("¿Asignar a TODOS los músicos su PRIMER NOMBRE como usuario y la contraseña 12345?\n\nOjo: esto reemplaza el usuario y la contraseña actuales. Cada músico podrá cambiar su contraseña después.")) return;
+  const used=new Set();
+  USERS.forEach(u=>used.add(u.u)); /* no chocar con cuentas maestras */
+  let n=0;
+  activos.slice().sort((a,b)=>(a.nombre||a.alias||"").localeCompare(b.nombre||b.alias||"")).forEach(m=>{
+    let base=normUser(firstName(m.nombre||m.alias||"")); if(!base) base="musico";
+    let u=base, i=1;
+    while(used.has(u)){ i++; u=base+i; }
+    used.add(u);
+    m.usuario=u; m.clave="12345";
+    n++;
+  });
+  persistM(); /* guarda todos + nube */
+  el("pickMusOverlay").classList.remove("open");
+  toast("✓ Usuario y clave (12345) asignados a "+n+" músicos");
 }
 function choosePickMus(id){ el("pickMusOverlay").classList.remove("open"); const cb=pickMusCb; pickMusCb=null; if(cb)cb(id); }
 
 /* ===== Usuarios y perfiles (admin) ===== */
 let userEditId=null, userEditRol="musico";
 function openUsuarios(){
-  pickMusico(id=>openUserEditor(id));
+  pickMusico(id=>openUserEditor(id), {bulk:true});
 }
 function openUserEditor(id){
   const m=data.find(x=>x.id===id); if(!m) return;
