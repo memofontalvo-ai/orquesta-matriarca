@@ -677,14 +677,14 @@
           <span class="mc-ico" style="background:linear-gradient(135deg,#3E8E6E,#2c6b52);width:52px;height:52px;border-radius:14px;display:grid;place-items:center;flex:none">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M7 15h3M14 15h3"/></svg>
           </span>
-          <span class="mc-txt"><b>Validación de pagos</b><small>Ver estado, enviar WhatsApp a músicos y generar reporte</small></span>
+          <span class="mc-txt"><b style="font-size:1.05rem">Reporte de pagos músicos</b><small>Ver estado, enviar WhatsApp y generar reporte</small></span>
           <span class="mc-arrow" style="font-size:22px;color:#C2832A;font-weight:700">›</span>
         </button>
         <button class="menu-card" id="goContaBancos" style="background:#fff;border:1.5px solid #e7e4da;border-radius:14px;box-shadow:0 1px 2px rgba(20,21,26,.04),0 8px 24px rgba(20,21,26,.06);padding:18px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;text-align:left">
           <span class="mc-ico" style="background:linear-gradient(135deg,#5B6CB0,#404f8f);width:52px;height:52px;border-radius:14px;display:grid;place-items:center;flex:none">
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>
           </span>
-          <span class="mc-txt"><b>Pago por Bancos</b><small>Procesar y marcar transferencias una por una</small></span>
+          <span class="mc-txt"><b style="font-size:1.05rem">Pago por Bancos</b><small>Procesar y marcar transferencias una por una</small></span>
           <span class="mc-arrow" style="font-size:22px;color:#C2832A;font-weight:700">›</span>
         </button>
       </div>
@@ -2812,7 +2812,13 @@ function renderBancos(){
     if(!item.pagado){
       botonHtml = `<button class="btn-pagar-uno" onclick="bancospagarUno(${item.id})">Pagar ✓</button>`;
     } else {
-      botonHtml = `<button class="btn-pagar-uno pagado-btn" disabled>Pago realizado ✓</button>`;
+      const deshacerBtn = (currentUser&&currentUser.rol==="admin")
+        ? `<button class="btn-pagar-uno" style="background:#C0473B;color:#fff;font-size:.75rem;padding:5px 10px" onclick="bancosDeshacer(${item.id})" title="Solo administrador">↩ Deshacer</button>`
+        : '';
+      botonHtml = `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <button class="btn-pagar-uno pagado-btn" disabled>Pago realizado ✓</button>
+        ${deshacerBtn}
+      </div>`;
     }
     return `<div class="conta-card ${item.pagado?'pagado':''}" id="bcrd-${item.id}">
       <div class="conta-card-head">
@@ -2865,6 +2871,23 @@ function bancospagarUno(id){
   /* también refrescar contabilidad si está abierta */
   renderBancos();
   toast("✓ Pago registrado — ya aparece en Contabilidad");
+}
+
+function bancosDeshacer(id){
+  if(!(currentUser&&currentUser.rol==="admin")){ toast("Solo el administrador puede deshacer un pago"); return; }
+  const m=data.find(x=>x.id===id);
+  const nombre=m?m.alias||m.nombre:id;
+  if(!confirm(`¿Deshacer el pago de ${nombre}?\n\nEsto lo vuelve a "Pendiente de pago" para que se pueda procesar nuevamente.`)) return;
+  const k=keyOf(bancosWeekMonday);
+  const wk=weeks[k]; if(!wk){ toast("No hay datos de esta semana"); return; }
+  wk.extra=wk.extra||{};
+  if(wk.extra[id]){
+    delete wk.extra[id].contaPagado;
+    delete wk.extra[id].contaPagadoAt;
+  }
+  persistW();
+  renderBancos();
+  toast("↩ Pago de "+nombre+" revertido a pendiente");
 }
 
 el("bancosPrev").onclick=()=>{bancosWeekMonday=addDays(bancosWeekMonday,-7);bancosSelectedIds=new Set();renderBancos();};
