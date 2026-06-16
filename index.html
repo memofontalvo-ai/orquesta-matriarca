@@ -488,6 +488,26 @@
   .conta-empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:.95rem;line-height:1.6}
   .conta-pend-note{background:#fff8ed;border:1px solid var(--amber);border-radius:10px;padding:12px 16px;font-size:.85rem;color:var(--amber-deep);text-align:center}
 
+  /* ── Estado de pagos (director, solo lectura) ── */
+  .vp-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;border-left:4px solid var(--line-strong);margin-bottom:10px}
+  .vp-card.vp-pagado{border-left-color:#3E8E6E}
+  .vp-card.vp-validado{border-left-color:#5B6CB0}
+  .vp-card.vp-pendiente{border-left-color:#C2832A}
+  .vp-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .vp-nombre{font-weight:800;font-size:1rem;color:var(--text)}
+  .vp-monto{font-weight:800;font-size:1.1rem;color:var(--amber-deep)}
+  .vp-card.vp-pagado .vp-monto{color:#3E8E6E}
+  .vp-badge{font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap}
+  .vp-badge.pagado{background:rgba(62,142,110,.15);color:#3E8E6E}
+  .vp-badge.validado{background:rgba(91,108,176,.15);color:#404f8f}
+  .vp-badge.pendiente{background:rgba(194,131,42,.15);color:#C2832A}
+  .vp-badge.wa{background:rgba(37,211,102,.15);color:#1a8a43;margin-left:6px}
+  .vp-sub{font-size:.8rem;color:var(--muted);margin-top:3px}
+  .vp-resumen-bar{display:flex;gap:16px;flex-wrap:wrap;background:var(--ink);color:#fff;border-radius:var(--radius);padding:14px 18px;margin-bottom:14px}
+  .vp-resumen-item{display:flex;flex-direction:column;gap:2px}
+  .vp-resumen-item span{font-size:.72rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.05em}
+  .vp-resumen-item b{font-size:1.1rem;font-weight:800}
+
 </style>
 </head>
 <body data-view="musicos">
@@ -580,6 +600,15 @@
             <span class="mc-txt"><b>Reporte de integrantes</b><small>Lista completa de la orquesta (solo lectura)</small></span>
             <span class="mc-arrow">›</span>
           </button>
+          <button class="menu-card" id="goValidarPagos">
+            <span class="mc-ico" style="background:linear-gradient(135deg,#C0473B,#9a3530)">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h3M14 15h3"/><path d="M16 2l-4 4-2-2"/></svg>
+            </span>
+            <span class="mc-txt"><b>Estado de pagos</b><small>Ver quién validó, quién falta y quién ya fue pagado</small></span>
+            <span class="mc-arrow">›</span>
+          </button>
+            <span class="mc-arrow">›</span>
+          </button>
         </div>
 
         <div class="menu-group grp-mus">
@@ -651,6 +680,24 @@
         <b id="contaTot">$0</b>
       </div>
       <button class="home-lock" id="contaLogout">Cerrar sesión</button>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA: ESTADO DE PAGOS (Director, solo lectura) ============ -->
+  <section class="screen" id="screen-validar">
+    <div class="conta-wrap">
+      <div class="conta-top">
+        <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">ESTADO DE PAGOS</span></div>
+        <p class="home-hi" id="validarHi">Solo lectura</p>
+      </div>
+      <div class="conta-week-nav">
+        <button id="validarPrev" class="wk-btn">‹</button>
+        <div class="conta-range" id="validarRange"></div>
+        <button id="validarNext" class="wk-btn">›</button>
+      </div>
+      <button id="validarToday" class="mus-today">Esta semana</button>
+      <div class="conta-body" id="validarBody"></div>
+      <button class="home-lock" id="validarBack">‹ Volver al menú</button>
     </div>
   </section>
 
@@ -1833,7 +1880,7 @@ let USERS=[
 let currentUser=null;
 let activeMusicoId=null;
 function showScreen(name){
-  ["login","home","musico","app","conta"].forEach(s=>el("screen-"+s).classList.toggle("active",s===name));
+  ["login","home","musico","app","conta","validar"].forEach(s=>el("screen-"+s).classList.toggle("active",s===name));
   window.scrollTo(0,0);
 }
 function applyRole(){
@@ -2457,7 +2504,122 @@ el("contaSelectAll").onclick=()=>{
 el("contaPaySelected").onclick=pagarSeleccionados;
 el("goContabilidad").onclick=showContaScreen;
 
-/* ── Gestión de cuenta de contabilidad por el admin ── */
+
+/* ============ MÓDULO ESTADO DE PAGOS (Director, solo lectura) ============ */
+let validarWeekMonday = mondayOf(new Date());
+
+function showValidarPagos(){
+  validarWeekMonday = mondayOf(new Date());
+  renderValidarPagos();
+  showScreen("validar");
+}
+
+function renderValidarPagos(){
+  const sun7 = addDays(validarWeekMonday,6);
+  el("validarRange").textContent =
+    cap(fmt(validarWeekMonday,{day:'numeric',month:'long'})) + " — " +
+    fmt(sun7,{day:'numeric',month:'short',year:'numeric'});
+
+  const k = keyOf(validarWeekMonday);
+  const wk = weeks[k];
+  const body = el("validarBody");
+
+  if(!wk || !wk.extra || !Object.keys(wk.extra).length){
+    body.innerHTML=`<div class="conta-empty"><b>No hay pagos enviados esta semana.</b><br>El administrador aún no ha enviado pagos a aprobación.</div>`;
+    return;
+  }
+
+  /* Recoger todos los músicos que tienen pago enviado */
+  const acc={};
+  wk.days.forEach(day=>{
+    day.pres.forEach(p=>{
+      if(!p.fmt||p.status!=="aprobada") return;
+      p.ids.forEach(id=>{
+        const m=data.find(x=>x.id===id); if(!m) return;
+        if(!acc[id]) acc[id]={base:0,m};
+        const r=effRate(p,m,p.fmt);
+        acc[id].base+=(r!=null?r:0);
+      });
+    });
+  });
+
+  const lista=[];
+  Object.keys(acc).map(Number).forEach(id=>{
+    const ex=(wk.extra&&wk.extra[id])||{};
+    if(!ex.sent) return;
+    const bono=ex.bono||0, desc=ex.desc||0;
+    const total=acc[id].base+bono-desc;
+    lista.push({
+      id,
+      m: acc[id].m,
+      total,
+      musOk:  !!(ex.musOk),
+      okAt:   ex.okAt||null,
+      contaPagado: !!(ex.contaPagado),
+      pagadoAt: ex.contaPagadoAt||null,
+      waSent: !!(ex.waSent),
+      waSentAt: ex.waSentAt||null
+    });
+  });
+
+  if(!lista.length){
+    body.innerHTML=`<div class="conta-empty"><b>No hay pagos enviados esta semana.</b></div>`;
+    return;
+  }
+
+  lista.sort((a,b)=>(a.m.alias||"").localeCompare(b.m.alias||""));
+
+  /* Contadores resumen */
+  const nPagados   = lista.filter(x=>x.contaPagado).length;
+  const nValidados = lista.filter(x=>x.musOk && !x.contaPagado).length;
+  const nPendientes= lista.filter(x=>!x.musOk).length;
+  const totalGral  = lista.reduce((s,x)=>s+x.total,0);
+
+  let html = `<div class="vp-resumen-bar">
+    <div class="vp-resumen-item"><span>Total semana</span><b>${cop(totalGral)}</b></div>
+    <div class="vp-resumen-item"><span>✅ Pagados</span><b>${nPagados}</b></div>
+    <div class="vp-resumen-item"><span>✓ Validados</span><b>${nValidados}</b></div>
+    <div class="vp-resumen-item"><span>⏳ Pendientes</span><b>${nPendientes}</b></div>
+  </div>`;
+
+  lista.forEach(item=>{
+    let badgeClass, badgeTxt, cardClass;
+    if(item.contaPagado){
+      badgeClass='pagado'; badgeTxt='✅ Pago realizado'; cardClass='vp-pagado';
+    } else if(item.musOk){
+      badgeClass='validado'; badgeTxt='✓ Validado por músico'; cardClass='vp-validado';
+    } else {
+      badgeClass='pendiente'; badgeTxt='⏳ Pendiente de validar'; cardClass='vp-pendiente';
+    }
+    const waBadge = item.waSent
+      ? `<span class="vp-badge wa">📱 WA enviado</span>` : '';
+    const fechaPago = item.pagadoAt ? ` · ${fmtDate(item.pagadoAt)}` : '';
+    const fechaVal  = item.okAt     ? ` · ${fmtDate(item.okAt)}`     : '';
+
+    html += `<div class="vp-card ${cardClass}">
+      <div class="vp-card-top">
+        <div class="vp-nombre">${esc(item.m.alias||item.m.nombre)}</div>
+        <div class="vp-monto">${cop(item.total)}</div>
+      </div>
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+        <span class="vp-badge ${badgeClass}">${badgeTxt}${item.contaPagado?fechaPago:fechaVal}</span>
+        ${waBadge}
+      </div>
+      <div class="vp-sub">${esc(item.m.banco||'')} · ${esc(item.m.cuenta||'')}</div>
+    </div>`;
+  });
+
+  body.innerHTML = html;
+}
+
+el("validarPrev").onclick=()=>{validarWeekMonday=addDays(validarWeekMonday,-7);renderValidarPagos();};
+el("validarNext").onclick=()=>{validarWeekMonday=addDays(validarWeekMonday,7);renderValidarPagos();};
+el("validarToday").onclick=()=>{validarWeekMonday=mondayOf(new Date());renderValidarPagos();};
+el("validarBack").onclick=()=>showScreen("home");
+el("goValidarPagos").onclick=showValidarPagos;
+
+/* ============ FIN MÓDULO ESTADO DE PAGOS ============ */
+
 function openUserEditorConta(){
   const acc = USERS.find(x=>x.rol==="contabilidad");
   userEditId = "__conta__";
