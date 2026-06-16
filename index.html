@@ -473,7 +473,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
-      <div class="app-version">v3.14 · Orquesta Matriarca</div>
+      <div class="app-version">v3.15 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -1960,7 +1960,6 @@ function saveMisDatos(){
   const cedula=el("meCedula").value.trim();
   const telefono=el("meTel").value.trim();
   if(!nombre){el("meErr").textContent="El nombre es obligatorio.";return;}
-  if(!cedula||!telefono){el("meErr").textContent="La cédula y el teléfono son obligatorios (son el usuario y la contraseña del músico).";return;}
   const upd={...m,nombre,alias:nombre,cedula,telefono,updatedAt:Date.now()};
   data=data.map(x=>x.id===m.id?upd:x);
   lsSaveM();
