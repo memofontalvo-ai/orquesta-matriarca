@@ -240,6 +240,8 @@
   body[data-rol="director"] .grp-dir,
   body[data-rol="director"] .grp-mus{display:block}
   body[data-rol="musico"] .grp-mus{display:block}
+  .conta-btn{display:none}
+  body[data-rol="admin"] .conta-btn{display:flex}
   .menu-group+.menu-group{margin-top:22px}
   .menu-group-h{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 4px 11px;display:flex;align-items:center;gap:9px}
   .menu-group-h::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -523,7 +525,7 @@
       <div class="menu-cards">
         <div class="menu-group grp-admin">
           <div class="menu-group-h">Módulo administrativo</div>
-          <button class="menu-card conta-only" id="goContabilidad" style="display:none">
+          <button class="menu-card conta-btn" id="goContabilidad">
             <span class="mc-ico" style="background:linear-gradient(135deg,#3E8E6E,#2c6b52)">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M7 15h3M14 15h3"/></svg>
             </span>
@@ -1833,11 +1835,6 @@ function showScreen(name){
 }
 function applyRole(){
   document.body.dataset.rol = currentUser ? currentUser.rol : "";
-  /* mostrar botón de contabilidad solo a admin */
-  const btnConta = el("goContabilidad");
-  if(btnConta){
-    btnConta.style.display = (currentUser && currentUser.rol==="admin") ? "" : "none";
-  }
 }
 function entrar(){
   const uRaw=el("usr").value.trim();
