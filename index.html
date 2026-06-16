@@ -447,6 +447,43 @@
     .shift-grid{grid-template-columns:1fr}
     .liq-wrap{overflow-x:auto}
   }
+  /* ======== MÓDULO CONTABILIDAD ======== */
+  .conta-wrap{max-width:620px;margin:0 auto;padding:24px 16px 40px;display:flex;flex-direction:column;gap:14px;min-height:100vh;background:var(--paper)}
+  .conta-top{text-align:center;padding:10px 0 4px}
+  .conta-week-nav{display:flex;align-items:center;justify-content:center;gap:10px}
+  .conta-range{font-size:.95rem;font-weight:600;color:var(--text);text-align:center;min-width:200px}
+  .conta-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .conta-body{display:flex;flex-direction:column;gap:14px}
+  .conta-total-bar{display:flex;justify-content:space-between;align-items:center;background:var(--ink);color:#fff;border-radius:var(--radius);padding:16px 20px;font-size:1rem;font-weight:600;margin-top:6px}
+  .conta-total-bar b{font-size:1.5rem;color:var(--amber)}
+  /* Tarjeta de músico en contabilidad */
+  .conta-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:0;overflow:hidden;border:2px solid var(--line);transition:border-color .2s}
+  .conta-card.selected{border-color:var(--amber)}
+  .conta-card.pagado{border-color:var(--ok);opacity:.75}
+  .conta-card-head{display:flex;align-items:center;gap:12px;padding:16px 16px 10px;cursor:pointer}
+  .conta-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--line-strong);display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff;transition:all .15s}
+  .conta-card.selected .conta-check{background:var(--amber);border-color:var(--amber-deep)}
+  .conta-card.pagado .conta-check{background:var(--ok);border-color:var(--ok)}
+  .conta-check svg{display:none}
+  .conta-card.selected .conta-check svg,.conta-card.pagado .conta-check svg{display:block}
+  .conta-name-block{flex:1;min-width:0}
+  .conta-alias{font-size:1.1rem;font-weight:800;color:var(--text);line-height:1.1}
+  .conta-nombre{font-size:.82rem;color:var(--muted);margin-top:1px}
+  .conta-monto{font-size:1.35rem;font-weight:800;color:var(--amber-deep);white-space:nowrap}
+  .conta-card.pagado .conta-monto{color:var(--ok)}
+  .conta-bank-block{padding:0 16px 14px;border-top:1px solid var(--line);margin-top:6px;padding-top:12px}
+  .conta-cuenta-big{font-size:1.55rem;font-weight:900;letter-spacing:.04em;color:var(--ink);font-variant-numeric:tabular-nums;word-break:break-all;line-height:1.2}
+  .conta-banco-row{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:.88rem;color:var(--muted);font-weight:600}
+  .conta-banco-tag{background:var(--night);color:#fff;border-radius:6px;padding:2px 10px;font-size:.78rem;font-weight:700;letter-spacing:.02em}
+  .conta-status-bar{padding:8px 16px 14px;display:flex;align-items:center;gap:10px;font-size:.85rem}
+  .conta-status-pendiente{color:var(--amber-deep);font-weight:700}
+  .conta-status-pagado{color:var(--ok);font-weight:700}
+  .btn-pagar-uno{margin-left:auto;background:var(--amber);color:#1A1B1E;font-weight:700;font-size:.82rem;padding:6px 16px;border-radius:8px;border:none;cursor:pointer;transition:background .15s}
+  .btn-pagar-uno:hover{background:var(--amber-deep);color:#fff}
+  .btn-pagar-uno.pagado-btn{background:var(--ok);color:#fff;cursor:default}
+  .conta-empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:.95rem;line-height:1.6}
+  .conta-pend-note{background:#fff8ed;border:1px solid var(--amber);border-radius:10px;padding:12px 16px;font-size:.85rem;color:var(--amber-deep);text-align:center}
+
 </style>
 </head>
 <body data-view="musicos">
@@ -486,6 +523,13 @@
       <div class="menu-cards">
         <div class="menu-group grp-admin">
           <div class="menu-group-h">Módulo administrativo</div>
+          <button class="menu-card conta-only" id="goContabilidad" style="display:none">
+            <span class="mc-ico" style="background:linear-gradient(135deg,#3E8E6E,#2c6b52)">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M7 15h3M14 15h3"/></svg>
+            </span>
+            <span class="mc-txt"><b>Validación de pagos</b><small>Autorizar transferencias a músicos</small></span>
+            <span class="mc-arrow">›</span>
+          </button>
           <button class="menu-card" id="goMusicos">
             <span class="mc-ico">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15.5 13.6A4.8 4.8 0 0 1 20.5 18"/></svg>
@@ -576,6 +620,32 @@
       <div class="mus-approve" id="musApprove"></div>
       <div class="mus-total"><span>Pago pendiente de la semana</span><b id="musTot">$0</b></div>
       <button class="home-lock" id="musLogout">Cerrar sesión</button>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA: CONTABILIDAD ============ -->
+  <section class="screen" id="screen-conta">
+    <div class="conta-wrap">
+      <div class="conta-top">
+        <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">CONTABILIDAD</span></div>
+        <p class="home-hi" id="contaHi">Validación de pagos</p>
+      </div>
+      <div class="conta-week-nav">
+        <button id="contaPrev" class="wk-btn">‹</button>
+        <div class="conta-range" id="contaRange"></div>
+        <button id="contaNext" class="wk-btn">›</button>
+      </div>
+      <button id="contaToday" class="mus-today">Esta semana</button>
+      <div class="conta-actions" id="contaActions" style="display:none">
+        <button class="btn btn-primary" id="contaSelectAll" style="background:#3E8E6E">☑ Seleccionar todos</button>
+        <button class="btn btn-primary" id="contaPaySelected" style="background:#E0A23B;color:#1A1B1E">Pagar seleccionados</button>
+      </div>
+      <div class="conta-body" id="contaBody"></div>
+      <div class="conta-total-bar">
+        <span>Total pendiente de pago</span>
+        <b id="contaTot">$0</b>
+      </div>
+      <button class="home-lock" id="contaLogout">Cerrar sesión</button>
     </div>
   </section>
 
@@ -1749,18 +1819,25 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
 
 /* ============ PANTALLAS / LOGIN ============ */
 /* Usuarios y roles. Cambia aquí usuarios y contraseñas (luego lo pasamos a la base de datos). */
-const USERS=[
-  {u:"admin",    p:"matriarca", rol:"admin",    nombre:"Administrador"},
-  {u:"director", p:"director",  rol:"director", nombre:"Director musical"},
+/* Credenciales maestras — el administrador puede cambiar la de contabilidad desde "Usuarios y perfiles" */
+let USERS=[
+  {u:"admin",        p:"matriarca",  rol:"admin",        nombre:"Administrador"},
+  {u:"director",     p:"director",   rol:"director",     nombre:"Director musical"},
+  {u:"contabilidad", p:"conta2024",  rol:"contabilidad", nombre:"Contabilidad"},
 ];
 let currentUser=null;
 let activeMusicoId=null;
 function showScreen(name){
-  ["login","home","musico","app"].forEach(s=>el("screen-"+s).classList.toggle("active",s===name));
+  ["login","home","musico","app","conta"].forEach(s=>el("screen-"+s).classList.toggle("active",s===name));
   window.scrollTo(0,0);
 }
 function applyRole(){
   document.body.dataset.rol = currentUser ? currentUser.rol : "";
+  /* mostrar botón de contabilidad solo a admin */
+  const btnConta = el("goContabilidad");
+  if(btnConta){
+    btnConta.style.display = (currentUser && currentUser.rol==="admin") ? "" : "none";
+  }
 }
 function entrar(){
   const uRaw=el("usr").value.trim();
@@ -1773,6 +1850,8 @@ function entrar(){
     el("loginErr").textContent="";
     el("usr").value=""; el("pwd").value="";
     el("homeHi").textContent="Hola, "+found.nombre+". ¿Qué vas a hacer hoy?";
+    /* contabilidad va directo a su módulo */
+    if(found.rol==="contabilidad"){ showContaScreen(); return; }
     showScreen("home");
     return;
   }
@@ -1809,7 +1888,7 @@ function renderPickMus(){
   const rows=data.filter(m=>m.estado!=="propuesto")
     .filter(m=>!q||[m.nombre,m.alias,m.cedula].some(v=>(v||"").toLowerCase().includes(q)))
     .sort((a,b)=>(a.nombre||a.alias||"").localeCompare(b.nombre||b.alias||""));
-  const bulkBtn=pickMusBulk?`<button class="pickmus-bulk" onclick="bulkDefaultCreds()">⚡ Asignar usuario y clave por defecto a todos</button>`:"";
+  const bulkBtn=pickMusBulk?`<button class="pickmus-bulk" onclick="bulkDefaultCreds()">⚡ Asignar usuario y clave por defecto a todos</button><button class="pickmus-bulk" style="background:linear-gradient(135deg,#3E8E6E,#2c6b52)" onclick="el('pickMusOverlay').classList.remove('open');openUserEditorConta()">🏦 Cambiar usuario/clave de Contabilidad</button>`:"";
   el("pickMusList").innerHTML=bulkBtn+(rows.length
     ? rows.map(m=>`<button class="pickmus-row" onclick="choosePickMus(${m.id})"><b>${esc(m.nombre||m.alias)}</b>${m.cedula?`<small>C.C. ${esc(m.cedula)}</small>`:''}</button>`).join("")
     : `<div class="liq-empty">Sin músicos.</div>`);
@@ -1876,6 +1955,22 @@ function updateUserNote(){
 }
 function closeUserEditor(){ el("userOverlay").classList.remove("open"); userEditId=null; }
 function saveUserCreds(){
+  /* caso especial: cuenta de contabilidad (no es músico) */
+  if(userEditId === "__conta__"){
+    const u = el("uUser").value.trim().toLowerCase();
+    const p = el("uPass").value.trim();
+    const err = el("userErr");
+    if(!u){ err.textContent="El usuario no puede estar vacío."; return; }
+    if(!p){ err.textContent="La contraseña no puede estar vacía."; return; }
+    if(USERS.some(x=>x.rol!=="contabilidad" && x.u===u)){
+      err.textContent="Ese usuario ya está en uso por otra cuenta maestra."; return;
+    }
+    const acc = USERS.find(x=>x.rol==="contabilidad");
+    if(acc){ acc.u=u; acc.p=p; }
+    closeUserEditor();
+    toast("✓ Credenciales de contabilidad actualizadas");
+    return;
+  }
   const m=data.find(x=>x.id===userEditId); if(!m){ closeUserEditor(); return; }
   const u=el("uUser").value.trim();
   const p=el("uPass").value.trim();
@@ -1895,6 +1990,7 @@ function saveUserCreds(){
   toast("✓ Perfil de "+(m.nombre||m.alias)+" actualizado");
 }
 function resetUserCreds(){
+  if(userEditId === "__conta__") return;
   const m=data.find(x=>x.id===userEditId); if(!m) return;
   el("uUser").value=""; el("uPass").value="";
   updateUserNote();
@@ -2054,6 +2150,205 @@ el("cpOverlay").addEventListener("click",e=>{if(e.target===el("cpOverlay"))close
 el("goDirector").onclick=()=>{viewAsDirector=true;abrirModulo("planilla");};
 el("backMenu").onclick=()=>showScreen("home");
 el("logout").onclick=logout;
+
+
+/* ============ MÓDULO CONTABILIDAD ============ */
+let contaWeekMonday = mondayOf(new Date());
+let contaSelectedIds = new Set();
+
+function showContaScreen(){
+  contaWeekMonday = mondayOf(new Date());
+  contaSelectedIds = new Set();
+  renderContabilidad();
+  showScreen("conta");
+}
+
+function computeContaPagos(){
+  /* Devuelve lista de músicos con pago aprobado (musOk) para la semana activa en contabilidad */
+  const k = keyOf(contaWeekMonday);
+  const wk = weeks[k];
+  if(!wk) return [];
+  const acc = {};
+  wk.days.forEach(day=>{
+    day.pres.forEach(p=>{
+      if(!p.fmt || p.status!=="aprobada") return;
+      p.ids.forEach(id=>{
+        const m = data.find(x=>x.id===id); if(!m) return;
+        if(!acc[id]) acc[id]={base:0};
+        const r = effRate(p,m,p.fmt);
+        acc[id].base += (r!=null?r:0);
+      });
+    });
+  });
+  /* solo músicos cuyo pago fue enviado y aprobado (musOk) */
+  const result=[];
+  Object.keys(acc).map(Number).forEach(id=>{
+    const m = data.find(x=>x.id===id); if(!m) return;
+    const ex = (wk.extra&&wk.extra[id]) ? wk.extra[id] : {bono:0,desc:0};
+    /* incluir si fue enviado a aprobación, haya sido aprobado o no (contabilidad ve todos los enviados) */
+    if(!ex.sent) return;
+    const total = acc[id].base + (ex.bono||0) - (ex.desc||0);
+    result.push({
+      id,
+      m,
+      total,
+      pagado: !!(ex.contaPagado),
+      pagadoAt: ex.contaPagadoAt||null,
+      musOk: !!(ex.musOk)
+    });
+  });
+  result.sort((a,b)=>(a.m.alias||"").localeCompare(b.m.alias||""));
+  return result;
+}
+
+function renderContabilidad(){
+  const sun7 = addDays(contaWeekMonday,6);
+  el("contaRange").textContent =
+    cap(fmt(contaWeekMonday,{day:'numeric',month:'long'})) + " — " +
+    fmt(sun7,{day:'numeric',month:'short',year:'numeric'});
+
+  const lista = computeContaPagos();
+  const pendientes = lista.filter(x=>!x.pagado);
+  const pagados = lista.filter(x=>x.pagado);
+
+  /* mostrar u ocultar barra de acciones masivas */
+  const actDiv = el("contaActions");
+  if(pendientes.length){
+    actDiv.style.display="flex";
+  } else {
+    actDiv.style.display="none";
+    contaSelectedIds=new Set();
+  }
+
+  let totalPend = 0;
+  pendientes.forEach(x=>totalPend+=x.total);
+  el("contaTot").textContent = cop(totalPend);
+
+  const body = el("contaBody");
+  if(!lista.length){
+    body.innerHTML=`<div class="conta-empty">
+      <b>No hay pagos para esta semana.</b><br>
+      Los pagos aparecen aquí cuando el administrador los envía a aprobación y los músicos los confirman.
+    </div>`;
+    return;
+  }
+
+  const sinAprobar = pendientes.filter(x=>!x.musOk);
+  let html = "";
+
+  if(sinAprobar.length){
+    html += `<div class="conta-pend-note">⚠ ${sinAprobar.length} músico${sinAprobar.length===1?'':'s'} aún no ha${sinAprobar.length===1?'':'n'} aprobado su pago desde la app.</div>`;
+  }
+
+  const renderCard = (item)=>{
+    const sel = contaSelectedIds.has(item.id);
+    const chk = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>`;
+    const pagoFecha = item.pagadoAt ? ` · ${fmtDate(item.pagadoAt)}` : "";
+    return `<div class="conta-card ${sel?'selected':''} ${item.pagado?'pagado':''}" id="ccrd-${item.id}">
+      <div class="conta-card-head" onclick="${item.pagado?'':('toggleContaSel('+item.id+')')}">
+        <div class="conta-check">${chk}</div>
+        <div class="conta-name-block">
+          <div class="conta-alias">${esc(item.m.alias||item.m.nombre)}</div>
+          <div class="conta-nombre">${esc(item.m.nombre||item.m.alias)}</div>
+        </div>
+        <div class="conta-monto">${cop(item.total)}</div>
+      </div>
+      <div class="conta-bank-block">
+        <div class="conta-cuenta-big">${esc(item.m.cuenta||'— sin cuenta —')}</div>
+        <div class="conta-banco-row">
+          <span class="conta-banco-tag">${esc(item.m.banco||'—')}</span>
+          ${item.m.cedula?`<span>C.C. ${esc(item.m.cedula)}</span>`:''}
+        </div>
+      </div>
+      <div class="conta-status-bar">
+        ${item.pagado
+          ? `<span class="conta-status-pagado">✓ Pagado${pagoFecha}</span>`
+          : `<span class="conta-status-pendiente">${item.musOk?'✓ Aprobado por músico':'⏳ Sin aprobar aún'} · Pendiente de pago</span>`}
+        ${!item.pagado
+          ? `<button class="btn-pagar-uno" onclick="pagarUno(${item.id})">Pagar ✓</button>`
+          : `<button class="btn-pagar-uno pagado-btn" disabled>Pagado ✓</button>`}
+      </div>
+    </div>`;
+  };
+
+  if(pendientes.length){
+    html += pendientes.map(renderCard).join("");
+  }
+  if(pagados.length){
+    html += `<div style="font-size:.8rem;color:var(--muted);font-weight:700;padding:8px 4px 2px;letter-spacing:.04em">YA PAGADOS</div>`;
+    html += pagados.map(renderCard).join("");
+  }
+
+  body.innerHTML = html;
+}
+
+function toggleContaSel(id){
+  if(contaSelectedIds.has(id)) contaSelectedIds.delete(id);
+  else contaSelectedIds.add(id);
+  renderContabilidad();
+}
+
+function pagarUno(id){
+  const k=keyOf(contaWeekMonday);
+  const wk=weeks[k]; if(!wk) return;
+  wk.extra=wk.extra||{};
+  wk.extra[id]=wk.extra[id]||{bono:0,desc:0};
+  wk.extra[id].contaPagado=true;
+  wk.extra[id].contaPagadoAt=Date.now();
+  persistW();
+  contaSelectedIds.delete(id);
+  renderContabilidad();
+  const m=data.find(x=>x.id===id);
+  toast("✓ Pago registrado: "+(m?m.alias:id));
+}
+
+function pagarSeleccionados(){
+  if(!contaSelectedIds.size){ toast("Selecciona al menos un músico"); return; }
+  const ids=[...contaSelectedIds];
+  const k=keyOf(contaWeekMonday);
+  const wk=weeks[k]; if(!wk){ toast("No hay datos de esta semana"); return; }
+  wk.extra=wk.extra||{};
+  const now=Date.now();
+  ids.forEach(id=>{
+    wk.extra[id]=wk.extra[id]||{bono:0,desc:0};
+    wk.extra[id].contaPagado=true;
+    wk.extra[id].contaPagadoAt=now;
+  });
+  persistW();
+  contaSelectedIds=new Set();
+  renderContabilidad();
+  toast("✓ "+ids.length+" pago"+(ids.length===1?"":"s")+" registrado"+(ids.length===1?"":"s"));
+}
+
+el("contaPrev").onclick=()=>{contaWeekMonday=addDays(contaWeekMonday,-7);contaSelectedIds=new Set();renderContabilidad();};
+el("contaNext").onclick=()=>{contaWeekMonday=addDays(contaWeekMonday,7);contaSelectedIds=new Set();renderContabilidad();};
+el("contaToday").onclick=()=>{contaWeekMonday=mondayOf(new Date());contaSelectedIds=new Set();renderContabilidad();};
+el("contaLogout").onclick=logout;
+el("contaSelectAll").onclick=()=>{
+  const lista=computeContaPagos().filter(x=>!x.pagado);
+  if(contaSelectedIds.size===lista.length){ contaSelectedIds=new Set(); }
+  else { contaSelectedIds=new Set(lista.map(x=>x.id)); }
+  renderContabilidad();
+};
+el("contaPaySelected").onclick=pagarSeleccionados;
+el("goContabilidad").onclick=showContaScreen;
+
+/* ── Gestión de cuenta de contabilidad por el admin ── */
+function openUserEditorConta(){
+  const acc = USERS.find(x=>x.rol==="contabilidad");
+  userEditId = "__conta__";
+  el("userTitle").textContent = "Usuario de Contabilidad";
+  el("userWho").innerHTML = `<b>Cuenta maestra de Contabilidad</b><small>No es un músico; solo tiene acceso al módulo de pagos</small>`;
+  el("rolPicker").innerHTML = `<div class="rol-chip on" style="background:var(--ok);color:#fff;border-color:var(--ok)">Contabilidad</div>`;
+  el("uUser").value = acc ? acc.u : "contabilidad";
+  el("uPass").value = acc ? acc.p : "";
+  el("userNote").textContent = "Cambia el usuario y contraseña de la cuenta de contabilidad.";
+  el("userErr").textContent = "";
+  el("userReset").style.display = "none";
+  el("userOverlay").classList.add("open");
+}
+
+/* ============ FIN MÓDULO CONTABILIDAD ============ */
 
 async function initApp(){
   try{
