@@ -756,6 +756,10 @@
   <section class="screen" id="screen-validar">
     <div class="conta-wrap">
       <div class="conta-top">
+        <button id="validarBackTop" class="btn-back">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+          Menú principal
+        </button>
         <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">ESTADO DE PAGOS</span></div>
         <p class="home-hi" id="validarHi">Solo lectura</p>
       </div>
@@ -1733,6 +1737,10 @@ function pushWeekCloud(k){
 }
 function fmtDate(ts){ try{ return new Date(ts).toLocaleDateString("es-CO",{day:'numeric',month:'short'}); }catch(e){ return ""; } }
 function repStatusHtml(ex){
+  if(ex&&ex.contaPagado){
+    const fecha = ex.contaPagadoAt ? ` · ${fmtDate(ex.contaPagadoAt)}` : "";
+    return `<div class="rep-status ok" style="background:rgba(62,142,110,.18);color:#2c6b52;font-weight:800;font-size:13px">✅ Pago realizado${fecha}</div>`;
+  }
   if(ex&&ex.musOk) return `<div class="rep-status ok">✓ ${ex.okBy==="admin"?"Aprobado (registrado por admin)":"Aprobado por el músico"}</div>`;
   if(ex&&ex.sent) return `<div class="rep-status sent">Enviado · esperando aprobación</div>`;
   return `<div class="rep-status none">Sin enviar</div>`;
@@ -2220,9 +2228,15 @@ function renderMusicoReport(){
   el("musPendNote").style.display=pend>0?"block":"none";
   const ap=(wk&&wk.extra&&wk.extra[m.id])?wk.extra[m.id]:null;
   let apHtml="";
-  if(ap&&ap.musOk){
+  if(ap&&ap.contaPagado){
+    /* Bancos ya realizó el pago — mostrar en TODOS los reportes */
+    const fechaPago = ap.contaPagadoAt ? ` el ${fmtDate(ap.contaPagadoAt)}` : "";
+    apHtml=`<div class="ma-done" style="background:rgba(62,142,110,.15);border:1.5px solid #3E8E6E;color:#2c6b52;font-weight:700;font-size:15px;padding:14px 16px;border-radius:12px;text-align:center">
+      ✅ Pago realizado${fechaPago}
+    </div>`;
+  } else if(ap&&ap.musOk){
     const quien=(ap.okBy==="admin")?" (registrada por el administrador)":"";
-    apHtml=`<div class="ma-done">✓ Pago aprobado${ap.okAt?` el ${fmtDate(ap.okAt)}`:''}${quien}. ¡Gracias!</div>`;
+    apHtml=`<div class="ma-done">✓ Pago aprobado${ap.okAt?` el ${fmtDate(ap.okAt)}`:''}${quien}. En proceso de transferencia.</div>`;
   } else if(ap&&ap.sent){
     apHtml=`<div class="ma-pending"><p>${soyMusico
         ? 'El administrador te envió tu pago para que lo revises. Si todo está bien, confírmalo.'
@@ -2692,6 +2706,7 @@ el("validarPrev").onclick=()=>{validarWeekMonday=addDays(validarWeekMonday,-7);r
 el("validarNext").onclick=()=>{validarWeekMonday=addDays(validarWeekMonday,7);renderValidarPagos();};
 el("validarToday").onclick=()=>{validarWeekMonday=mondayOf(new Date());renderValidarPagos();};
 el("validarBack").onclick=()=>showScreen("home");
+el("validarBackTop").onclick=()=>showScreen("home");
 el("goValidarPagos").onclick=showValidarPagos;
 
 /* ============ FIN MÓDULO ESTADO DE PAGOS ============ */
