@@ -472,7 +472,7 @@
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
       <div class="login-hint">Músicos: si el administrador no te ha dado un usuario, tu <b>usuario</b> es tu cédula y tu <b>contraseña</b> es tu teléfono.</div>
-      <div class="app-version">v3.11 · Orquesta Matriarca</div>
+      <div class="app-version">v3.12 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -1541,7 +1541,7 @@ function pushWeekCloud(k){
 }
 function fmtDate(ts){ try{ return new Date(ts).toLocaleDateString("es-CO",{day:'numeric',month:'short'}); }catch(e){ return ""; } }
 function repStatusHtml(ex){
-  if(ex&&ex.musOk) return `<div class="rep-status ok">✓ Aprobado por el músico</div>`;
+  if(ex&&ex.musOk) return `<div class="rep-status ok">✓ ${ex.okBy==="admin"?"Aprobado (registrado por admin)":"Aprobado por el músico"}</div>`;
   if(ex&&ex.sent) return `<div class="rep-status sent">Enviado · esperando aprobación</div>`;
   return `<div class="rep-status none">Sin enviar</div>`;
 }
@@ -1599,10 +1599,11 @@ function aprobarMiPago(){
   wk.extra[activeMusicoId]=wk.extra[activeMusicoId]||{bono:0,desc:0};
   wk.extra[activeMusicoId].musOk=true;
   wk.extra[activeMusicoId].okAt=Date.now();
+  wk.extra[activeMusicoId].okBy=(currentUser&&currentUser.rol==="musico")?"musico":"admin";
   persistW();
   pushWeekCloud(k);
   renderMusicoReport();
-  toast("✓ ¡Gracias! Aprobaste tu pago de la semana");
+  toast("✓ Pago aprobado");
 }
 function musDetailHtml(id){
   const wk=getWeek();
@@ -1985,11 +1986,12 @@ function renderMusicoReport(){
   const ap=(wk&&wk.extra&&wk.extra[m.id])?wk.extra[m.id]:null;
   let apHtml="";
   if(ap&&ap.musOk){
-    apHtml=`<div class="ma-done">✓ Aprobaste este pago${ap.okAt?` el ${fmtDate(ap.okAt)}`:''}. ¡Gracias!</div>`;
+    const quien=(ap.okBy==="admin")?" (registrada por el administrador)":"";
+    apHtml=`<div class="ma-done">✓ Pago aprobado${ap.okAt?` el ${fmtDate(ap.okAt)}`:''}${quien}. ¡Gracias!</div>`;
   } else if(ap&&ap.sent){
-    apHtml=soyMusico
-      ? `<div class="ma-pending"><p>El administrador te envió tu pago para que lo revises. Si todo está bien, confírmalo.</p><button class="ma-btn" onclick="aprobarMiPago()">Aprobar mi pago ✓</button></div>`
-      : `<div class="ma-done" style="background:rgba(194,131,42,.12);border-color:rgba(194,131,42,.4);color:#9a6a18">Enviado · esperando que el músico apruebe</div>`;
+    apHtml=`<div class="ma-pending"><p>${soyMusico
+        ? 'El administrador te envió tu pago para que lo revises. Si todo está bien, confírmalo.'
+        : 'Pendiente de aprobación del músico. Si ya dio el visto bueno, puedes registrarlo aquí.'}</p><button class="ma-btn" onclick="aprobarMiPago()">${soyMusico?'Aprobar mi pago ✓':'Aprobar a nombre del músico ✓'}</button></div>`;
   }
   el("musApprove").innerHTML=apHtml;
 }
