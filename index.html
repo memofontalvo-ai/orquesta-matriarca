@@ -348,6 +348,28 @@
   .report-tot span{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
   .report-tot b{font-size:25px;font-weight:800;color:var(--amber-deep)}
   .btn-copyrep{width:100%;padding:15px;border:none;border-radius:13px;background:#25D366;color:#fff;font-size:15.5px;font-weight:800;cursor:pointer}
+  .report-actions{display:flex;flex-direction:column;gap:9px}
+  .report-actions-row{display:flex;gap:9px}
+  .btn-sendrep{width:100%;padding:15px;border:none;border-radius:13px;background:var(--ink);color:#fff;font-size:15.5px;font-weight:800;cursor:pointer}
+  .btn-sendrep:active{transform:scale(.99)}
+  .btn-saverep{flex:1;padding:13px;border:1.5px solid var(--line-strong);border-radius:12px;background:#fff;color:var(--ink);font-size:14px;font-weight:800;cursor:pointer}
+  .btn-copyrep-sec{flex:1;padding:13px;border:1.5px solid #25D366;border-radius:12px;background:rgba(37,211,102,.10);color:#1a8c45;font-size:14px;font-weight:800;cursor:pointer}
+  .rep-status{display:inline-block;margin-top:8px;font-size:12px;font-weight:800;padding:5px 11px;border-radius:8px}
+  .rep-status.none{background:var(--line);color:var(--muted)}
+  .rep-status.sent{background:rgba(194,131,42,.14);color:#9a6a18}
+  .rep-status.ok{background:rgba(62,142,110,.16);color:#2c6b52}
+  .mus-approve{margin-top:14px}
+  .mus-approve .ma-pending{background:#fff;border:1.5px solid #C2832A;border-radius:14px;padding:15px 16px;text-align:center}
+  .mus-approve .ma-pending p{margin:0 0 11px;font-size:14px;color:var(--ink);line-height:1.45}
+  .mus-approve .ma-btn{width:100%;padding:14px;border:none;border-radius:12px;background:#3E8E6E;color:#fff;font-size:15.5px;font-weight:800;cursor:pointer}
+  .mus-approve .ma-btn:active{transform:scale(.99)}
+  .mus-approve .ma-done{background:rgba(62,142,110,.14);border:1px solid rgba(62,142,110,.4);border-radius:14px;padding:14px 16px;text-align:center;font-size:14px;font-weight:700;color:#2c6b52}
+  .roster-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin-bottom:11px}
+  .roster-card.prop{border-color:#3E8E6E;background:rgba(62,142,110,.05)}
+  .roster-name{font-size:16px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .roster-sub{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .roster-bank{font-size:13px;color:var(--ink-soft);margin-top:4px}
+  .roster-tar{margin-top:9px}
   .btn-copyrep:active{transform:scale(.99)}
   .btn-guardar{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 24px);margin:12px;padding:14px;border:none;border-radius:12px;background:var(--ink);color:#fff;font-size:15px;font-weight:800;cursor:pointer}
   .btn-guardar:hover{background:#000}
@@ -450,7 +472,7 @@
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
       <div class="login-hint">Músicos: si el administrador no te ha dado un usuario, tu <b>usuario</b> es tu cédula y tu <b>contraseña</b> es tu teléfono.</div>
-      <div class="app-version">v3.10 · Orquesta Matriarca</div>
+      <div class="app-version">v3.11 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -502,6 +524,13 @@
             <span class="mc-txt"><b>Proponer contratación</b><small>Crear un músico nuevo para que el administrador lo apruebe</small></span>
             <span class="mc-arrow">›</span>
           </button>
+          <button class="menu-card" id="goRoster">
+            <span class="mc-ico" style="background:linear-gradient(135deg,#C79A3A,#9a7426)">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><circle cx="9" cy="8" r="3"/><path d="M3 19a6 6 0 0 1 12 0"/><circle cx="17.5" cy="9" r="2.4"/><path d="M16 19a5 5 0 0 1 6-4.5"/></svg>
+            </span>
+            <span class="mc-txt"><b>Reporte de integrantes</b><small>Lista completa de la orquesta (solo lectura)</small></span>
+            <span class="mc-arrow">›</span>
+          </button>
         </div>
 
         <div class="menu-group grp-mus">
@@ -543,6 +572,7 @@
       <div class="mus-body" id="musBody"></div>
       <div class="mus-pend" id="musPendNote" style="display:none">⚠ Tienes presentaciones <b>por confirmar</b> por el administrador. Esas todavía no suman al total.</div>
       <div class="mus-extra" id="musExtra"></div>
+      <div class="mus-approve" id="musApprove"></div>
       <div class="mus-total"><span>Pago pendiente de la semana</span><b id="musTot">$0</b></div>
       <button class="home-lock" id="musLogout">Cerrar sesión</button>
     </div>
@@ -643,7 +673,27 @@
       <div class="report-body" id="reportBody"></div>
       <div class="report-foot">
         <div class="report-tot"><span>Total a pagar</span><b id="repTot">$0</b></div>
-        <button class="btn-copyrep" id="btnCopyReport">Copiar para WhatsApp</button>
+        <div class="report-actions">
+          <button class="btn-sendrep" id="btnSendApproval">Enviar a aprobación del músico</button>
+          <div class="report-actions-row">
+            <button class="btn-saverep" id="btnSaveReport">Guardar reporte</button>
+            <button class="btn-copyrep-sec" id="btnCopyReport">Copiar para WhatsApp</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reporte de integrantes (solo lectura) -->
+  <div class="report-overlay" id="rosterOverlay">
+    <div class="report-sheet">
+      <div class="report-bar">
+        <div><h3>Reporte de integrantes</h3><div class="report-range" id="rosterCount"></div></div>
+        <button class="report-close" id="rosterClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="report-body" id="rosterBody"></div>
+      <div class="report-foot">
+        <div class="report-tot"><span>Integrantes</span><b id="rosterTot">0</b></div>
       </div>
     </div>
   </div>
@@ -1484,6 +1534,76 @@ function dayShort(i){return cap(fmt(addDays(curMonday,i),{weekday:'short'}).repl
 /* weekly consolidated report */
 function openWeekReport(){ renderWeekReport(); el("reportOverlay").classList.add("show"); }
 function closeWeekReport(){ el("reportOverlay").classList.remove("show"); }
+function pushWeekCloud(k){
+  if(window.db && weeks[k]){
+    try{ window.db.collection(COL_W).doc(k).set(weeks[k]).catch(()=>{}); }catch(e){}
+  }
+}
+function fmtDate(ts){ try{ return new Date(ts).toLocaleDateString("es-CO",{day:'numeric',month:'short'}); }catch(e){ return ""; } }
+function repStatusHtml(ex){
+  if(ex&&ex.musOk) return `<div class="rep-status ok">✓ Aprobado por el músico</div>`;
+  if(ex&&ex.sent) return `<div class="rep-status sent">Enviado · esperando aprobación</div>`;
+  return `<div class="rep-status none">Sin enviar</div>`;
+}
+/* Guardar reporte (admin) */
+function saveReport(){
+  persistW();
+  pushWeekCloud(keyOf(curMonday));
+  toast("✓ Reporte guardado");
+}
+/* Enviar a aprobación del músico (admin) */
+function sendApproval(){
+  const wk=getWeek();
+  const acc=computeLiq();
+  const ids=Object.keys(acc).map(Number).filter(id=>data.find(m=>m.id===id));
+  if(!ids.length){ toast("No hay pagos validados para enviar."); return; }
+  ids.forEach(id=>{
+    wk.extra[id]=wk.extra[id]||{bono:0,desc:0};
+    wk.extra[id].sent=true; wk.extra[id].sentAt=Date.now();
+    wk.extra[id].musOk=false; wk.extra[id].okAt=null;
+  });
+  persistW();
+  pushWeekCloud(keyOf(curMonday));
+  renderWeekReport();
+  toast("✓ Enviado a aprobación de "+ids.length+" músico"+(ids.length===1?"":"s"));
+}
+/* Reporte de integrantes (solo lectura, director/admin) */
+function openRoster(){ renderRoster(); el("rosterOverlay").classList.add("show"); }
+function closeRoster(){ el("rosterOverlay").classList.remove("show"); }
+function renderRoster(){
+  const rows=data.slice().sort((a,b)=>{
+    const pa=(a.estado==="propuesto")?1:0, pb=(b.estado==="propuesto")?1:0;
+    if(pa!==pb) return pa-pb;
+    return (a.nombre||a.alias||"").localeCompare(b.nombre||b.alias||"");
+  });
+  el("rosterTot").textContent=data.length;
+  el("rosterCount").textContent=data.length+" integrante"+(data.length===1?"":"s");
+  el("rosterBody").innerHTML = !rows.length
+    ? `<div class="liq-empty">Aún no hay integrantes.</div>`
+    : rows.map(m=>{
+        const prop=(m.estado==="propuesto");
+        const datos=[m.cedula?("C.C. "+m.cedula):"", m.telefono?("📱 "+m.telefono):""].filter(Boolean).join("  ·  ");
+        return `<div class="roster-card ${prop?'prop':''}">
+          <div class="roster-name">${esc(m.nombre||m.alias||"")}${prop?' <span class="prop-badge">PROPUESTO</span>':''}</div>
+          ${datos?`<div class="roster-sub">${esc(datos)}</div>`:''}
+          <div class="roster-bank">${esc(m.banco||'—')} ${esc(m.cuenta||'')}</div>
+          <div class="roster-tar">${tarifaChips(m)}</div>
+        </div>`;
+      }).join("");
+}
+function aprobarMiPago(){
+  const k=keyOf(curMonday);
+  const wk=weeks[k];
+  if(!wk){ return; }
+  wk.extra=wk.extra||{};
+  wk.extra[activeMusicoId]=wk.extra[activeMusicoId]||{bono:0,desc:0};
+  wk.extra[activeMusicoId].musOk=true;
+  wk.extra[activeMusicoId].okAt=Date.now();
+  persistW();
+  pushWeekCloud(k);
+  renderMusicoReport();
+  toast("✓ ¡Gracias! Aprobaste tu pago de la semana");
+}
 function musDetailHtml(id){
   const wk=getWeek();
   const m=data.find(x=>x.id===id); if(!m) return "";
@@ -1530,6 +1650,7 @@ function renderWeekReport(){
       <div class="rep-meta">${c.count} presentaci${c.count===1?'ón':'ones'} · Días: ${dias||'—'}</div>
       ${musDetailHtml(id)}
       <div class="rep-bank">${esc(m.banco||'')} ${esc(m.cuenta||'')}</div>
+      ${repStatusHtml(ex)}
       <div class="rep-adj">
         <label>Subtotal <b>${cop(c.base)}</b></label>
         <label>Bono <input class="minput" value="${ex.bono?Number(ex.bono).toLocaleString('es-CO'):''}" placeholder="0" oninput="setExtra(${id},'bono',this.value)"></label>
@@ -1545,6 +1666,7 @@ function setExtra(id,field,val){
   const wk=getWeek();
   wk.extra[id]=wk.extra[id]||{bono:0,desc:0};
   wk.extra[id][field]=cleanNum(val)||0;
+  wk.extra[id].musOk=false; wk.extra[id].okAt=null; /* cambió el monto: requiere re-aprobación */
   persistW();
   const acc=computeLiq();let gPay=0;
   Object.keys(acc).map(Number).filter(i=>data.find(m=>m.id===i)).forEach(i=>{
@@ -1614,6 +1736,11 @@ el("fileImport").addEventListener("change",e=>{if(e.target.files[0])importData(e
 el("btnWeekReport").onclick=openWeekReport;
 el("closeReport").onclick=closeWeekReport;
 el("btnCopyReport").onclick=copyLiq;
+el("btnSaveReport").onclick=saveReport;
+el("btnSendApproval").onclick=sendApproval;
+el("goRoster").onclick=openRoster;
+el("rosterClose").onclick=closeRoster;
+el("rosterOverlay").addEventListener("click",e=>{ if(e.target===el("rosterOverlay")) closeRoster(); });
 el("reportOverlay").addEventListener("click",e=>{ if(e.target===el("reportOverlay")) closeWeekReport(); });
 el("overlay").addEventListener("click",e=>{if(e.target===el("overlay"))closeModal();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
@@ -1855,6 +1982,16 @@ function renderMusicoReport(){
   el("musExtra").innerHTML=extraLine;
   el("musTot").textContent=cop(base+(ex.bono||0)-(ex.desc||0));
   el("musPendNote").style.display=pend>0?"block":"none";
+  const ap=(wk&&wk.extra&&wk.extra[m.id])?wk.extra[m.id]:null;
+  let apHtml="";
+  if(ap&&ap.musOk){
+    apHtml=`<div class="ma-done">✓ Aprobaste este pago${ap.okAt?` el ${fmtDate(ap.okAt)}`:''}. ¡Gracias!</div>`;
+  } else if(ap&&ap.sent){
+    apHtml=soyMusico
+      ? `<div class="ma-pending"><p>El administrador te envió tu pago para que lo revises. Si todo está bien, confírmalo.</p><button class="ma-btn" onclick="aprobarMiPago()">Aprobar mi pago ✓</button></div>`
+      : `<div class="ma-done" style="background:rgba(194,131,42,.12);border-color:rgba(194,131,42,.4);color:#9a6a18">Enviado · esperando que el músico apruebe</div>`;
+  }
+  el("musApprove").innerHTML=apHtml;
 }
 function logout(){ currentUser=null; document.body.dataset.rol=""; showScreen("login"); }
 function abrirModulo(view){
