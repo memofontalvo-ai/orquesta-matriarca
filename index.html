@@ -554,6 +554,13 @@
             <span class="mc-txt"><b>Validación de pagos</b><small>Autorizar transferencias a músicos</small></span>
             <span class="mc-arrow">›</span>
           </button>
+          <button class="menu-card conta-btn" id="goBancos">
+            <span class="mc-ico" style="background:linear-gradient(135deg,#5B6CB0,#404f8f)">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>
+            </span>
+            <span class="mc-txt"><b>Pago por Bancos</b><small>Procesar transferencias una por una</small></span>
+            <span class="mc-arrow">›</span>
+          </button>
           <button class="menu-card" id="goMusicos">
             <span class="mc-ico">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15.5 13.6A4.8 4.8 0 0 1 20.5 18"/></svg>
@@ -670,8 +677,6 @@
       </div>
       <button id="contaToday" class="mus-today">Esta semana</button>
       <div class="conta-actions" id="contaActions" style="display:none">
-        <button class="btn btn-primary" id="contaSelectAll" style="background:#3E8E6E">☑ Seleccionar todos</button>
-        <button class="btn btn-primary" id="contaPaySelected" style="background:#E0A23B;color:#1A1B1E">Pagar seleccionados</button>
         <button class="btn btn-primary" id="contaWABloque" style="background:#25D366;color:#fff" onclick="enviarWABloque()">📱 WhatsApp a pagados</button>
       </div>
       <div class="conta-body" id="contaBody"></div>
@@ -680,6 +685,28 @@
         <b id="contaTot">$0</b>
       </div>
       <button class="home-lock" id="contaLogout">Cerrar sesión</button>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA: PAGO POR BANCOS ============ -->
+  <section class="screen" id="screen-bancos">
+    <div class="conta-wrap">
+      <div class="conta-top">
+        <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">PAGO POR BANCOS</span></div>
+        <p class="home-hi" id="bancosHi">Procesar pagos uno por uno</p>
+      </div>
+      <div class="conta-week-nav">
+        <button id="bancosPrev" class="wk-btn">‹</button>
+        <div class="conta-range" id="bancosRange"></div>
+        <button id="bancosNext" class="wk-btn">›</button>
+      </div>
+      <button id="bancosToday" class="mus-today">Esta semana</button>
+      <div class="conta-body" id="bancosBody"></div>
+      <div class="conta-total-bar">
+        <span>Total pendiente de pago</span>
+        <b id="bancosTot">$0</b>
+      </div>
+      <button class="home-lock" id="bancosLogout">Cerrar sesión</button>
     </div>
   </section>
 
@@ -1876,11 +1903,12 @@ let USERS=[
   {u:"admin",        p:"matriarca",  rol:"admin",        nombre:"Administrador"},
   {u:"director",     p:"director",   rol:"director",     nombre:"Director musical"},
   {u:"contabilidad", p:"conta2024",  rol:"contabilidad", nombre:"Contabilidad"},
+  {u:"bancos",       p:"bancos2024", rol:"bancos",       nombre:"Pago por Bancos"},
 ];
 let currentUser=null;
 let activeMusicoId=null;
 function showScreen(name){
-  ["login","home","musico","app","conta","validar"].forEach(s=>el("screen-"+s).classList.toggle("active",s===name));
+  ["login","home","musico","app","conta","validar","bancos"].forEach(s=>el("screen-"+s).classList.toggle("active",s===name));
   window.scrollTo(0,0);
 }
 function applyRole(){
@@ -1899,6 +1927,8 @@ function entrar(){
     el("homeHi").textContent="Hola, "+found.nombre+". ¿Qué vas a hacer hoy?";
     /* contabilidad va directo a su módulo */
     if(found.rol==="contabilidad"){ showContaScreen(); return; }
+    /* bancos va directo a su módulo */
+    if(found.rol==="bancos"){ showBancosScreen(); return; }
     showScreen("home");
     return;
   }
@@ -2210,9 +2240,10 @@ function showContaScreen(){
   showScreen("conta");
 }
 
-function computeContaPagos(){
+function computeContaPagos(weekMonday){
   /* Devuelve lista de músicos con pago aprobado (musOk) para la semana activa en contabilidad */
-  const k = keyOf(contaWeekMonday);
+  const mon = weekMonday || contaWeekMonday;
+  const k = keyOf(mon);
   const wk = weeks[k];
   if(!wk) return [];
   const acc = {};
@@ -2258,9 +2289,12 @@ function renderContabilidad(){
   const pendientes = lista.filter(x=>!x.pagado);
   const pagados = lista.filter(x=>x.pagado);
 
-  /* mostrar u ocultar barra de acciones masivas */
+  /* mostrar u ocultar barra de acciones: solo si hay pagados sin WA enviado */
   const actDiv = el("contaActions");
-  if(pendientes.length){
+  const k0 = keyOf(contaWeekMonday);
+  const wk0 = weeks[k0]||{extra:{}};
+  const hayPagadosSinWA = pagados.some(x=>{ const ex=(wk0.extra&&wk0.extra[x.id])||{}; return !ex.waSent; });
+  if(hayPagadosSinWA){
     actDiv.style.display="flex";
   } else {
     actDiv.style.display="none";
@@ -2296,10 +2330,10 @@ function renderContabilidad(){
     const sel = contaSelectedIds.has(item.id);
     const chk = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>`;
     const pagoFecha = item.pagadoAt ? ` · ${fmtDate(item.pagadoAt)}` : "";
-    /* Botones según estado */
+    /* Botones según estado — Contabilidad NO paga, solo envía WhatsApp cuando ya está pagado */
     let botonesHtml = "";
     if(!item.pagado){
-      botonesHtml = `<button class="btn-pagar-uno" onclick="pagarUno(${item.id})">Pagar ✓</button>`;
+      botonesHtml = `<span style="font-size:.78rem;color:var(--amber-deep);font-weight:700;font-style:italic">Pendiente de pago por Bancos</span>`;
     } else if(!waSent){
       botonesHtml = `<button class="btn-pagar-uno btn-wa" onclick="abrirWA(${item.id})">📱 Enviar WhatsApp</button>`;
     } else {
@@ -2495,13 +2529,6 @@ el("contaPrev").onclick=()=>{contaWeekMonday=addDays(contaWeekMonday,-7);contaSe
 el("contaNext").onclick=()=>{contaWeekMonday=addDays(contaWeekMonday,7);contaSelectedIds=new Set();renderContabilidad();};
 el("contaToday").onclick=()=>{contaWeekMonday=mondayOf(new Date());contaSelectedIds=new Set();renderContabilidad();};
 el("contaLogout").onclick=logout;
-el("contaSelectAll").onclick=()=>{
-  const lista=computeContaPagos().filter(x=>!x.pagado);
-  if(contaSelectedIds.size===lista.length){ contaSelectedIds=new Set(); }
-  else { contaSelectedIds=new Set(lista.map(x=>x.id)); }
-  renderContabilidad();
-};
-el("contaPaySelected").onclick=pagarSeleccionados;
 el("goContabilidad").onclick=showContaScreen;
 
 
@@ -2635,6 +2662,117 @@ function openUserEditorConta(){
 }
 
 /* ============ FIN MÓDULO CONTABILIDAD ============ */
+
+/* ============ MÓDULO PAGO POR BANCOS ============ */
+let bancosWeekMonday = mondayOf(new Date());
+let bancosSelectedIds = new Set();
+
+function showBancosScreen(){
+  bancosWeekMonday = mondayOf(new Date());
+  bancosSelectedIds = new Set();
+  renderBancos();
+  showScreen("bancos");
+}
+
+function renderBancos(){
+  const sun7 = addDays(bancosWeekMonday,6);
+  el("bancosRange").textContent =
+    cap(fmt(bancosWeekMonday,{day:'numeric',month:'long'})) + " — " +
+    fmt(sun7,{day:'numeric',month:'short',year:'numeric'});
+
+  const lista = computeContaPagos(bancosWeekMonday); /* reutilizamos la misma lista */
+  const pendientes = lista.filter(x=>!x.pagado);
+  const pagados = lista.filter(x=>x.pagado);
+
+  let totalPend = 0;
+  pendientes.forEach(x=>totalPend+=x.total);
+  el("bancosTot").textContent = cop(totalPend);
+
+  const body = el("bancosBody");
+  if(!lista.length){
+    body.innerHTML=`<div class="conta-empty">
+      <b>No hay pagos para esta semana.</b><br>
+      Los pagos aparecen aquí cuando el administrador los envía a aprobación y los músicos los confirman.
+    </div>`;
+    return;
+  }
+
+  const sinAprobar = pendientes.filter(x=>!x.musOk);
+  let html = "";
+
+  if(sinAprobar.length){
+    html += `<div class="conta-pend-note">⚠ ${sinAprobar.length} músico${sinAprobar.length===1?'':'s'} aún no ha${sinAprobar.length===1?'':'n'} aprobado su pago desde la app.</div>`;
+  }
+
+  const renderBancosCard = (item)=>{
+    const pagoFecha = item.pagadoAt ? ` · ${fmtDate(item.pagadoAt)}` : "";
+    const chk = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>`;
+    let botonHtml = "";
+    if(!item.pagado){
+      botonHtml = `<button class="btn-pagar-uno" onclick="bancospagarUno(${item.id})">Pagar ✓</button>`;
+    } else {
+      botonHtml = `<button class="btn-pagar-uno pagado-btn" disabled>Pago realizado ✓</button>`;
+    }
+    return `<div class="conta-card ${item.pagado?'pagado':''}" id="bcrd-${item.id}">
+      <div class="conta-card-head">
+        <div class="conta-check">${item.pagado?chk:''}</div>
+        <div class="conta-name-block">
+          <div class="conta-alias">${esc(item.m.alias||item.m.nombre)}</div>
+          <div class="conta-nombre">${esc(item.m.nombre||item.m.alias)}</div>
+        </div>
+        <div class="conta-monto">${cop(item.total)}</div>
+      </div>
+      <div class="conta-bank-block">
+        <div class="conta-cuenta-big">${esc(item.m.cuenta||'— sin cuenta —')}</div>
+        <div class="conta-banco-row">
+          <span class="conta-banco-tag">${esc(item.m.banco||'—')}</span>
+          ${item.m.cedula?`<span>C.C. ${esc(item.m.cedula)}</span>`:''}
+          ${item.m.telefono?`<span>📱 ${esc(item.m.telefono)}</span>`:''}
+        </div>
+      </div>
+      <div class="conta-status-bar">
+        <div style="flex:1">
+          ${item.pagado
+            ? `<span class="conta-status-pagado">✅ Pago realizado${pagoFecha}</span>`
+            : `<span class="conta-status-pendiente">${item.musOk?'✓ Aprobado por músico':'⏳ Sin aprobar aún'} · Pendiente de pago</span>`}
+        </div>
+        ${botonHtml}
+      </div>
+    </div>`;
+  };
+
+  if(pendientes.length){
+    html += `<div style="font-size:.8rem;color:var(--muted);font-weight:700;padding:4px 4px 6px;letter-spacing:.04em">PENDIENTES DE PAGO</div>`;
+    html += pendientes.map(renderBancosCard).join("");
+  }
+  if(pagados.length){
+    html += `<div style="font-size:.8rem;color:var(--muted);font-weight:700;padding:10px 4px 4px;letter-spacing:.04em">YA PAGADOS</div>`;
+    html += pagados.map(renderBancosCard).join("");
+  }
+
+  body.innerHTML = html;
+}
+
+function bancospagarUno(id){
+  const k=keyOf(bancosWeekMonday);
+  const wk=weeks[k]; if(!wk){ toast("No hay datos de esta semana"); return; }
+  wk.extra=wk.extra||{};
+  wk.extra[id]=wk.extra[id]||{bono:0,desc:0};
+  wk.extra[id].contaPagado=true;
+  wk.extra[id].contaPagadoAt=Date.now();
+  persistW();
+  /* también refrescar contabilidad si está abierta */
+  renderBancos();
+  toast("✓ Pago registrado — ya aparece en Contabilidad");
+}
+
+el("bancosPrev").onclick=()=>{bancosWeekMonday=addDays(bancosWeekMonday,-7);bancosSelectedIds=new Set();renderBancos();};
+el("bancosNext").onclick=()=>{bancosWeekMonday=addDays(bancosWeekMonday,7);bancosSelectedIds=new Set();renderBancos();};
+el("bancosToday").onclick=()=>{bancosWeekMonday=mondayOf(new Date());bancosSelectedIds=new Set();renderBancos();};
+el("bancosLogout").onclick=logout;
+el("goBancos").onclick=showBancosScreen;
+
+/* ============ FIN MÓDULO PAGO POR BANCOS ============ */
 
 async function initApp(){
   try{
