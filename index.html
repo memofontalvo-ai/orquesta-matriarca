@@ -352,6 +352,17 @@
   .btn-guardar{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 24px);margin:12px;padding:14px;border:none;border-radius:12px;background:var(--ink);color:#fff;font-size:15px;font-weight:800;cursor:pointer}
   .btn-guardar:hover{background:#000}
   .btn-guardar:active{transform:scale(.99)}
+  .lockbadge{font-size:12px;font-weight:800;color:#2c6b52;background:rgba(62,142,110,.16);padding:5px 11px;border-radius:8px;white-space:nowrap}
+  .lockpres{margin:10px 12px;border:1px solid var(--line-strong);border-radius:12px;padding:11px 13px;background:#FBFAF6}
+  .lockpres-h{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);margin-bottom:4px}
+  .lockpres-meta{font-size:12.5px;color:var(--ink-soft);margin-bottom:4px}
+  .lockpres-mus{font-size:13.5px;color:var(--ink);font-weight:600;line-height:1.45}
+  .rep-detail{margin-top:9px;border-top:1px dashed var(--line-strong);padding-top:8px;display:flex;flex-direction:column;gap:5px}
+  .rep-det-row{display:flex;align-items:baseline;gap:8px;font-size:13px}
+  .rd-day{flex:0 0 78px;font-weight:700;color:var(--ink-soft);text-transform:capitalize}
+  .rd-grp{flex:1 1 auto;font-weight:700}
+  .rd-when{flex:0 0 auto;color:var(--muted);font-size:12px}
+  .rd-val{flex:0 0 auto;font-weight:800;color:var(--amber-deep);margin-left:auto}
   .pres-time{display:flex;align-items:center;gap:10px;padding:11px 13px 4px}
   .pres-time label{font-size:12px;font-weight:700;color:var(--ink-soft)}
   .pres-time input[type=time]{font-size:14px;font-weight:600;padding:6px 10px;border:1.5px solid var(--line-strong);border-radius:9px;background:#fff;color:var(--ink)}
@@ -439,7 +450,7 @@
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
       <div class="login-hint">Músicos: si el administrador no te ha dado un usuario, tu <b>usuario</b> es tu cédula y tu <b>contraseña</b> es tu teléfono.</div>
-      <div class="app-version">v3.9 · Orquesta Matriarca</div>
+      <div class="app-version">v3.10 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -1003,7 +1014,12 @@ function tarifaChips(m){
 }
 function renderM(){
   const q=el("search").value.trim().toLowerCase();
-  const rows=data.filter(m=>!q||[m.nombre,m.alias,m.banco,m.cedula,m.telefono].some(v=>(v||"").toLowerCase().includes(q)));
+  const rows=data.filter(m=>!q||[m.nombre,m.alias,m.banco,m.cedula,m.telefono].some(v=>(v||"").toLowerCase().includes(q)))
+    .sort((a,b)=>{
+      const pa=(a.estado==="propuesto")?1:0, pb=(b.estado==="propuesto")?1:0;
+      if(pa!==pb) return pa-pb; /* activos primero, propuestos al final */
+      return (a.nombre||a.alias||"").localeCompare(b.nombre||b.alias||"");
+    });
   el("list").innerHTML = !rows.length
     ? `<div class="empty-state"><b>${data.length?"Sin resultados":"Aún no hay músicos"}</b>${data.length?"Prueba con otro término.":"Agrega tu primer músico."}</div>`
     : rows.map(m=>{
@@ -1158,7 +1174,7 @@ function isDirector(){ return !!(currentUser && currentUser.rol==="director"); }
 let viewAsDirector=false;
 function isDirectorView(){ return isDirector() || viewAsDirector; }
 function normDay(d){
-  if(d && Array.isArray(d.pres)) return {pres:d.pres.map(p=>normPres(p))};
+  if(d && Array.isArray(d.pres)) return {pres:d.pres.map(p=>normPres(p)), locked:!!d.locked};
   const out=[];
   if(d){
     [["dia","12:00"],["noche","20:00"]].forEach(([kk,defH])=>{
@@ -1168,7 +1184,7 @@ function normDay(d){
       else if(s.fmt!=null || (Array.isArray(s.ids)&&s.ids.length)){ out.push(normPres({fmt:s.fmt,ids:s.ids},defH)); }
     });
   }
-  return {pres:out};
+  return {pres:out, locked:false};
 }
 function getWeek(){
   const k=keyOf(curMonday);
@@ -1222,9 +1238,12 @@ function dayCard(day){
   const presCount=day.pres.length;
   const totalMus=day.pres.reduce((a,p)=>a+p.ids.length,0);
   const pend=day.pres.filter(p=>p.status==="propuesta"&&p.fmt).length;
+  if(dir && day.locked && presCount) return lockedDayCard(day);
   const list=day.pres.map((p,pi)=>presBlock(p,pi)).join("");
-  const title=dir?"Presentaciones del día":"Presentaciones del día";
+  const title="Presentaciones del día";
   const validarTodo=(!dir&&pend>0)?`<button class="addpres" style="border-color:#3E8E6E;color:#2c6b52;background:rgba(62,142,110,.12)" onclick="aprobarDia()">Validar todas (${pend})</button>`:"";
+  const saveIco=`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>`;
+  const saveBtn = presCount?`<button class="btn-guardar" onclick="guardarProgramacion()">${saveIco} ${dir?"Guardar y bloquear el día":"Guardar programación"}</button>`:'';
   return `<div class="shift">
     <div class="shift-head">
       <div class="shift-title"><span class="badge ico sun">${sun()}</span>${title}</div>
@@ -1232,7 +1251,29 @@ function dayCard(day){
     </div>
     ${presCount?list:`<div class="pick-empty">Sin presentaciones todavía. Toca <b>“+ Agregar presentación”</b>.</div>`}
     <div class="shift-foot">${presCount} presentaci${presCount===1?'ón':'ones'} · ${totalMus} músico${totalMus===1?'':'s'}${(!dir&&pend>0)?` · <b style="color:#C2832A">${pend} pendiente${pend===1?'':'s'} de validar</b>`:''}</div>
-    ${presCount?`<button class="btn-guardar" onclick="guardarProgramacion()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar programación</button>`:''}
+    ${saveBtn}
+  </div>`;
+}
+function lockedDayCard(day){
+  const totalMus=day.pres.reduce((a,p)=>a+p.ids.length,0);
+  const blocks=day.pres.map((p,pi)=>{
+    const per=periodOf(p.hora);
+    const names=p.ids.map(id=>{const m=data.find(x=>x.id===id);return m?esc(m.alias):'';}).filter(Boolean).join(", ");
+    const label=p.fmt?`<span style="color:${FMT_COLORS[p.fmt]};font-weight:700">${esc(p.fmt)}</span>`:'Sin grupo';
+    return `<div class="lockpres">
+      <div class="lockpres-h"><b>Presentación ${pi+1}</b>${p.status==="propuesta"?'<span class="pendtag">pendiente de validar</span>':''}</div>
+      <div class="lockpres-meta">${p.hora?`🕒 ${p.hora}${per?` · ${per}`:''} · `:''}${label}</div>
+      <div class="lockpres-mus">${names||'<span style="color:var(--muted)">Sin músicos</span>'}</div>
+    </div>`;
+  }).join("");
+  return `<div class="shift">
+    <div class="shift-head">
+      <div class="shift-title"><span class="badge ico sun">${sun()}</span>Presentaciones del día</div>
+      <span class="lockbadge">🔒 Guardada</span>
+    </div>
+    ${blocks}
+    <div class="shift-foot">${day.pres.length} presentaci${day.pres.length===1?'ón':'ones'} · ${totalMus} músico${totalMus===1?'':'s'} · <b>bloqueada</b></div>
+    <button class="btn-guardar" style="background:var(--amber-deep)" onclick="editarProgramacion()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Editar programación</button>
   </div>`;
 }
 function presBlock(p,pi){
@@ -1318,17 +1359,26 @@ function addReplace(pi,id){
   persistW();renderWeek();
 }
 function guardarProgramacion(){
+  const dir=isDirectorView();
+  if(dir){ const wk=getWeek(); if(wk.days[selDay]) wk.days[selDay].locked=true; }
   persistW();
   const k=keyOf(curMonday);
   if(window.db && weeks[k]){
     try{
       window.db.collection(COL_W).doc(k).set(weeks[k])
-        .then(()=>toast("✓ Programación guardada en la nube"))
+        .then(()=>toast(dir?"✓ Día guardado y bloqueado en la nube":"✓ Programación guardada en la nube"))
         .catch(()=>toast("Guardada en este dispositivo (sin nube)"));
     }catch(e){ toast("Guardada en este dispositivo"); }
   } else {
-    toast("✓ Programación guardada en este dispositivo");
+    toast(dir?"✓ Día guardado y bloqueado":"✓ Programación guardada en este dispositivo");
   }
+  renderWeek();
+}
+function editarProgramacion(){
+  const wk=getWeek();
+  if(wk.days[selDay]) wk.days[selDay].locked=false;
+  persistW();
+  renderWeek();
 }
 function addPres(){
   const day=getWeek().days[selDay];
@@ -1434,6 +1484,22 @@ function dayShort(i){return cap(fmt(addDays(curMonday,i),{weekday:'short'}).repl
 /* weekly consolidated report */
 function openWeekReport(){ renderWeekReport(); el("reportOverlay").classList.add("show"); }
 function closeWeekReport(){ el("reportOverlay").classList.remove("show"); }
+function musDetailHtml(id){
+  const wk=getWeek();
+  const m=data.find(x=>x.id===id); if(!m) return "";
+  let rows="";
+  wk.days.forEach((day,di)=>{
+    const mine=day.pres.filter(sp=>sp.fmt && sp.status==="aprobada" && sp.ids.includes(id));
+    if(!mine.length) return;
+    const dname=cap(fmt(addDays(curMonday,di),{weekday:'long'}));
+    mine.forEach(sp=>{
+      const r=effRate(sp,m,sp.fmt); const val=(r!=null?r:0);
+      const per=periodOf(sp.hora);
+      rows+=`<div class="rep-det-row"><span class="rd-day">${dname}</span><span class="rd-grp" style="color:${FMT_COLORS[sp.fmt]||'#555'}">${esc(sp.fmt)}</span><span class="rd-when">${sp.hora?sp.hora:'—'}${per?` · ${per}`:''}</span><span class="rd-val">${cop(val)}</span></div>`;
+    });
+  });
+  return rows?`<div class="rep-detail">${rows}</div>`:"";
+}
 function renderWeekReport(){
   const wk=getWeek();
   const acc=computeLiq();
@@ -1462,6 +1528,7 @@ function renderWeekReport(){
       </div>
       <div class="rep-grupos">${grupos}</div>
       <div class="rep-meta">${c.count} presentaci${c.count===1?'ón':'ones'} · Días: ${dias||'—'}</div>
+      ${musDetailHtml(id)}
       <div class="rep-bank">${esc(m.banco||'')} ${esc(m.cuenta||'')}</div>
       <div class="rep-adj">
         <label>Subtotal <b>${cop(c.base)}</b></label>
@@ -1494,9 +1561,16 @@ function copyLiq(){
   let txt=`REPORTE DE PAGOS · ${cap(fmt(curMonday,{day:'numeric',month:'long'}))} al ${fmt(sun7,{day:'numeric',month:'long',year:'numeric'})}\n\n`;
   let gPay=0;
   ids.forEach(id=>{const m=data.find(x=>x.id===id),c=acc[id];const ex=wk.extra[id]||{bono:0,desc:0};const tot=c.base+(ex.bono||0)-(ex.desc||0);gPay+=tot;
-    const det=Object.keys(c.byFmt).map(f=>`${f} ×${c.byFmt[f]}`).join(", ");
-    const dias=[...c.days].sort((a,b)=>a-b).map(dayShort).join(", ");
-    let line=`• ${m.alias} — ${cop(tot)}\n   ${det}\n   ${c.count} present. · Días: ${dias}\n   ${m.banco||''} ${m.cuenta||''}`;
+    let det2="";
+    wk.days.forEach((day,di)=>{
+      const mine=day.pres.filter(sp=>sp.fmt && sp.status==="aprobada" && sp.ids.includes(id));
+      mine.forEach(sp=>{
+        const r=effRate(sp,m,sp.fmt); const val=(r!=null?r:0);
+        const per=periodOf(sp.hora);
+        det2+=`\n   - ${cap(fmt(addDays(curMonday,di),{weekday:'long'}))}: ${sp.fmt}${sp.hora?` ${sp.hora}`:''}${per?` (${per})`:''} — ${cop(val)}`;
+      });
+    });
+    let line=`• ${m.alias} — ${cop(tot)}${det2}\n   ${c.count} present. · Subtotal ${cop(c.base)}\n   ${m.banco||''} ${m.cuenta||''}`;
     if(ex.bono) line+=`\n   (incluye bono ${cop(ex.bono)})`;
     if(ex.desc) line+=`\n   (menos descuento ${cop(ex.desc)})`;
     txt+=line+`\n\n`;});
@@ -1766,7 +1840,7 @@ function renderMusicoReport(){
         if(ok) base+=val; else pend++;
         return `<div class="mr-item">
           <span class="mr-grp" style="background:${(FMT_COLORS[s.fmt]||'#888')}1f;color:${FMT_COLORS[s.fmt]||'#555'}">${esc(s.fmt)}</span>
-          <span class="mr-when">${s.hora?s.hora:'—'}</span>
+          <span class="mr-when">${s.hora?s.hora:'—'}${periodOf(s.hora)?` · ${periodOf(s.hora)}`:''}</span>
           <span class="mr-val">${ok?cop(val):'<span class="mr-tag">por confirmar</span>'}</span>
         </div>`;
       }).join("");
