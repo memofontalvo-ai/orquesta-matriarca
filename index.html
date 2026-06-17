@@ -569,7 +569,7 @@
             <span class="mc-ico" style="background:linear-gradient(135deg,#3E8E6E,#2c6b52)">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20M7 15h3M14 15h3"/></svg>
             </span>
-            <span class="mc-txt"><b>Contabilidad</b><small>Validación de pagos, bancos y reportes</small></span>
+            <span class="mc-txt"><b>Contabilidad</b><small>Validacion de pagos, bancos y reportes</small></span>
             <span class="mc-arrow">›</span>
           </button>
           <button class="menu-card" id="goMusicos">
@@ -1091,8 +1091,7 @@
   </div>
 
   <div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<!-- Firebase desactivado - modo localStorage -->
 <script>
   /* ===== Conexión a Firebase (base de datos del proyecto CONTROL MUSICOS) ===== */
   const firebaseConfig = {
@@ -1103,12 +1102,7 @@
     messagingSenderId: "259864283569",
     appId: "1:259864283569:web:3c82edbceefa320d839590"
   };
-  try {
-    firebase.initializeApp(firebaseConfig);
-    window.db = firebase.firestore();
-  } catch(e) {
-    window.db = null;
-  }
+  window.db = null; // modo localStorage
 </script>
 <script>
 const FORMATOS=["Orquesta pequeña","Orquesta grande","Quinteto","Quinteto Ordinario","Vallenato","Música popular"];
@@ -1256,7 +1250,7 @@ async function loadW(){
   return local;
 }
 
-/* ── guardar semana ── */
+/* guardar semana */
 function persistW(k){
   if(!k) k=keyOf(curMonday);
   if(weeks[k]) weeks[k]._ts=Date.now();
@@ -3442,6 +3436,55 @@ function showProgramacion(){
   showScreen("prog");
 }
 
+function instrIcon(instr){
+  var i=(instr||"").toLowerCase();
+  var o='<svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2">';
+  var c='</svg>';
+  if(i.indexOf("trompet")>=0)  return o+'<path d="M4 26c2-4 6-6 10-6h5l7-10"/><circle cx="30" cy="8" r="3"/><circle cx="4" cy="26" r="4"/>'+c;
+  if(i.indexOf("trombon")>=0)  return o+'<rect x="3" y="10" width="20" height="6" rx="2"/><path d="M23 13h7"/><circle cx="31" cy="13" r="2"/><path d="M7 16v8a3 3 0 0 0 6 0v-8"/>'+c;
+  if(i.indexOf("saxo")>=0)     return o+'<path d="M22 5c0 0-1 8-8 16a5 5 0 1 0 3 2l8-15c3-1 4-4 4-7"/><circle cx="9" cy="27" r="4"/>'+c;
+  if(i.indexOf("flauta")>=0)   return o+'<path d="M3 18h30"/><circle cx="9" cy="18" r="2.5"/><circle cx="16" cy="18" r="2.5"/><circle cx="23" cy="18" r="2.5"/><circle cx="30" cy="18" r="2.5"/>'+c;
+  if(i.indexOf("violin")>=0)   return o+'<ellipse cx="18" cy="23" rx="7" ry="9"/><path d="M11 19c0-3 3-5 7-5s7 2 7 5"/><path d="M18 14V5"/><path d="M14 5h8"/>'+c;
+  if(i.indexOf("guitarra")>=0) return o+'<ellipse cx="18" cy="24" rx="8" ry="9"/><path d="M18 15V5"/><path d="M13 5h10"/><circle cx="18" cy="24" r="2.5"/>'+c;
+  if(i.indexOf("bajo")>=0)     return o+'<ellipse cx="18" cy="24" rx="9" ry="9"/><path d="M18 15V5"/><path d="M13 5h10"/><circle cx="18" cy="24" r="2.5"/><path d="M27 24v-5"/>'+c;
+  if(i.indexOf("bateri")>=0||i.indexOf("bateria")>=0) return o+'<ellipse cx="18" cy="25" rx="13" ry="6"/><ellipse cx="9" cy="14" rx="6" ry="3"/><ellipse cx="28" cy="17" rx="5" ry="3"/><path d="M14 22L9 17M22 22l6-5"/>'+c;
+  if(i.indexOf("piano")>=0||i.indexOf("teclado")>=0) return o+'<rect x="3" y="11" width="30" height="17" rx="2"/><path d="M9 11v10M15 11v10M21 11v10M27 11v10"/><rect x="6" y="11" width="4" height="8" fill="currentColor" stroke="none"/><rect x="12" y="11" width="4" height="8" fill="currentColor" stroke="none"/><rect x="24" y="11" width="4" height="8" fill="currentColor" stroke="none"/>'+c;
+  if(i.indexOf("percus")>=0||i.indexOf("conga")>=0||i.indexOf("timbal")>=0) return o+'<ellipse cx="13" cy="14" rx="7" ry="4"/><path d="M6 14v13M20 14v13"/><ellipse cx="13" cy="27" rx="7" ry="3"/><ellipse cx="27" cy="17" rx="5" ry="3"/><path d="M22 17v11M32 17v11"/>'+c;
+  if(i.indexOf("acorde")>=0)   return o+'<rect x="6" y="8" width="24" height="20" rx="3"/><path d="M14 8v20M22 8v20M6 18h8M22 18h8"/>'+c;
+  if(i.indexOf("voz")>=0||i.indexOf("vocal")>=0||i.indexOf("coro")>=0) return o+'<ellipse cx="18" cy="13" rx="5" ry="6"/><path d="M11 17c0 4 3 7 7 7s7-3 7-7"/><path d="M18 24v5M13 29h10"/>'+c;
+  if(i.indexOf("gaita")>=0)    return o+'<path d="M18 4v18"/><circle cx="10" cy="12" r="5"/><circle cx="26" cy="16" r="4"/><path d="M10 17v11M26 20v8"/>'+c;
+  return o+'<path d="M14 28V10l14-3v18"/><circle cx="11" cy="28" r="3"/><circle cx="25" cy="25" r="3"/>'+c;
+}
+
+function escenarioHTML(musicosArr){
+  if(!musicosArr.length) return '';
+  var soyYo = currentUser && currentUser.musicoId;
+  var items = '';
+  for(var z=0;z<musicosArr.length;z++){
+    var m = musicosArr[z];
+    var esMio = !!(soyYo && soyYo===m.id);
+    var color  = esMio ? "#2c6b52" : "#5B6CB0";
+    var bg     = esMio ? "#E8F5F0" : "#F0EDE4";
+    var border = esMio ? "2px solid #2c6b52" : "2px solid #ddd";
+    var alias  = (m.nombre||"").split(" ")[0];
+    var icon   = instrIcon(m.instrumento||"");
+    items += '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:60px">';
+    items += '<div style="width:44px;height:44px;border-radius:50%;background:'+bg+';color:'+color+';display:flex;align-items:center;justify-content:center;border:'+border+'">';
+    items += icon;
+    items += '</div>';
+    items += '<div style="font-size:10px;font-weight:700;color:#3a3820;text-align:center;line-height:1.2">'+esc(alias)+'</div>';
+    if(m.instrumento) items += '<div style="font-size:9px;color:#73757E;text-align:center">'+esc(m.instrumento)+'</div>';
+    if(esMio) items += '<div style="font-size:9px;background:#2c6b52;color:#fff;border-radius:20px;padding:1px 6px;font-weight:800">YO</div>';
+    items += '</div>';
+  }
+  var html = '<div style="margin-top:10px">';
+  html += '<div style="font-size:10px;font-weight:800;color:#9A9CA6;letter-spacing:.07em;margin-bottom:8px">ESCENARIO</div>';
+  html += '<div style="background:#F7F5F0;border-radius:12px;padding:12px 8px;border:1.5px dashed #ddd">';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">'+items+'</div>';
+  html += '</div></div>';
+  return html;
+}
+
 function renderProgramacion(){
   const sun7 = addDays(progMonday, 6);
   el("progRange").textContent =
@@ -3504,7 +3547,7 @@ function renderProgramacion(){
       const aprobada = p.status === "aprobada";
       const musicos = p.ids.map(id=>{
         const m = data.find(x=>x.id===id);
-        return m ? {nombre: m.alias||m.nombre, id: m.id} : null;
+        return m ? {nombre: m.alias||m.nombre, id: m.id, instrumento: m.instrumento||""} : null;
       }).filter(Boolean);
 
       const yoEstoy = currentUser && currentUser.musicoId && p.ids.includes(currentUser.musicoId);
@@ -3518,12 +3561,7 @@ function renderProgramacion(){
           </div>
           <span style="color:#73757E;font-size:13px;font-weight:700">${p.hora?p.hora:'—'}${per?' · '+per:''}</span>
         </div>
-        ${musicos.length?`<div style="display:flex;flex-wrap:wrap;gap:5px">
-          ${musicos.map(({nombre,id})=>{
-            const esMio = currentUser && currentUser.musicoId && currentUser.musicoId===id;
-            return `<span style="background:${esMio?'#3E8E6E':'#F0EDE4'};color:${esMio?'#fff':'#3a3820'};font-size:12px;font-weight:${esMio?'800':'600'};padding:4px 10px;border-radius:20px">${esc(nombre)}</span>`;
-          }).join("")}
-        </div>`:'<span style="color:var(--muted);font-size:12px">Sin músicos asignados</span>'}
+        ${musicos.length ? escenarioHTML(musicos) : '<span style="color:var(--muted);font-size:12px">Sin musicos asignados</span>'}
       </div>`;
     });
 
