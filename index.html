@@ -2351,12 +2351,19 @@ function renderContabilidad(){
   const pendientes = lista.filter(x=>!x.pagado);
   const pagados = lista.filter(x=>x.pagado);
 
-  /* mostrar u ocultar barra de acciones: solo si hay pagados sin WA enviado */
+  /* mostrar u ocultar barra de acciones */
   const actDiv = el("contaActions");
   const k0 = keyOf(contaWeekMonday);
   const wk0 = weeks[k0]||{extra:{}};
   const hayPagadosSinWA = pagados.some(x=>{ const ex=(wk0.extra&&wk0.extra[x.id])||{}; return !ex.waSent; });
-  if(hayPagadosSinWA){
+  const todosPagados = lista.length > 0 && pendientes.length === 0;
+
+  /* Botón WA: solo si hay pagados sin WA */
+  el("contaWABloque").style.display = hayPagadosSinWA ? "inline-flex" : "none";
+  /* Botón reporte: solo si todos están pagados */
+  el("contaReporte").style.display = todosPagados ? "inline-flex" : "none";
+
+  if(hayPagadosSinWA || todosPagados){
     actDiv.style.display="flex";
   } else {
     actDiv.style.display="none";
@@ -2504,6 +2511,11 @@ function buildWAMsg(item){
 function abrirWA(id){
   const lista = computeContaPagos();
   const item = lista.find(x=>x.id===id); if(!item) return;
+  /* Solo permitir si Bancos ya realizó el pago */
+  if(!item.pagado){
+    toast("⚠ Solo se puede enviar WhatsApp cuando Bancos ya realizó el pago");
+    return;
+  }
   const tel = String(item.m.telefono||"").replace(/\D/g,"");
   const msg = encodeURIComponent(buildWAMsg(item));
   const url = tel ? `https://wa.me/57${tel}?text=${msg}` : `https://wa.me/?text=${msg}`;
@@ -2729,6 +2741,15 @@ function openUserEditorConta(){
 function generarReporteImagen(){
   const lista = computeContaPagos();
   if(!lista.length){ toast("No hay pagos para generar reporte"); return; }
+
+  /* Verificar que TODOS estén pagados */
+  const sinPagar = lista.filter(x=>!x.pagado);
+  if(sinPagar.length){
+    const nombres = sinPagar.slice(0,3).map(x=>x.m.alias||x.m.nombre).join(", ");
+    const mas = sinPagar.length>3 ? ` y ${sinPagar.length-3} más` : "";
+    alert(`⚠ El reporte solo se puede generar cuando el 100% de los pagos estén realizados.\n\nFaltan ${sinPagar.length} músico${sinPagar.length===1?'':'s'} sin pago realizado por Bancos:\n${nombres}${mas}`);
+    return;
+  }
 
   const sun7 = addDays(contaWeekMonday,6);
   const semanaStr = cap(fmt(contaWeekMonday,{day:'numeric',month:'long'})) + " — " + fmt(sun7,{day:'numeric',month:'short',year:'numeric'});
