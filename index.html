@@ -2118,9 +2118,31 @@ let USERS=[
 ];
 let currentUser=null;
 let activeMusicoId=null;
+let _navCur = "login";
+const _PADRE = {
+  "app":"home","musico":"home","conta":"home",
+  "conta-validar":"conta","conta-bancos":"conta",
+  "validar":"home","indicadores":"home","prog":"home"
+};
 function showScreen(name){
   ["login","home","musico","app","conta","conta-validar","conta-bancos","validar","bancos","indicadores","prog"].forEach(s=>{ const e=el("screen-"+s); if(e) e.classList.toggle("active",s===name); });
   window.scrollTo(0,0);
+  _navCur = name;
+  _navActualizar(name);
+}
+function _navActualizar(name){
+  const bar = document.getElementById("globalNavBar");
+  if(!bar) return;
+  if(!name || name==="login"){ bar.classList.remove("visible"); return; }
+  bar.classList.add("visible");
+  const back = document.getElementById("navBack");
+  const home = document.getElementById("navHome");
+  if(!back||!home) return;
+  const tienePadre = !!_PADRE[name];
+  back.style.opacity = tienePadre ? "1" : "0.25";
+  back.style.pointerEvents = tienePadre ? "auto" : "none";
+  home.style.opacity = name==="home" ? "0.25" : "1";
+  home.style.pointerEvents = name==="home" ? "none" : "auto";
 }
 function applyRole(){
   document.body.dataset.rol = currentUser ? currentUser.rol : "";
@@ -3568,66 +3590,19 @@ initApp();
 </div>
 
 <script>
-/* ============================================================
-   NAVEGACIÓN GLOBAL — se ejecuta DESPUÉS del DOM
-   ============================================================ */
-(function(){
-  const PADRE = {
-    "app"           : "home",
-    "musico"        : "home",
-    "conta"         : "home",
-    "conta-validar" : "conta",
-    "conta-bancos"  : "conta",
-    "validar"       : "home",
-    "indicadores"   : "home",
-    "prog"          : "home",
-  };
-
-  let _cur = "login";
-
-  /* Interceptar showScreen */
-  const _orig = showScreen;
-  window.showScreen = function(name){
-    _orig(name);
-    _cur = name;
-    actualizar(name);
-  };
-
-  function actualizar(name){
-    const bar = document.getElementById("globalNavBar");
-    if(!bar) return;
-    if(!name || name === "login"){
-      bar.classList.remove("visible"); return;
-    }
-    bar.classList.add("visible");
-    const back = document.getElementById("navBack");
-    const home = document.getElementById("navHome");
-    /* Regresar: visible si tiene pantalla padre */
-    back.style.opacity = PADRE[name] ? "1" : "0.25";
-    back.style.pointerEvents = PADRE[name] ? "auto" : "none";
-    /* Inicio: oculto si ya estamos en home */
-    home.style.opacity = name === "home" ? "0.25" : "1";
-    home.style.pointerEvents = name === "home" ? "none" : "auto";
-  }
-
-  document.getElementById("navBack").onclick = function(){
-    const padre = PADRE[_cur];
-    if(!padre) return;
-    if(padre === "conta") showContaScreen();
-    else showScreen(padre);
-  };
-
-  document.getElementById("navHome").onclick = function(){
-    showScreen("home");
-  };
-
-  document.getElementById("navLogout").onclick = function(){
-    logout();
-  };
-
-  /* Estado inicial */
-  actualizar("login");
-})();
+/* Botones de navegación global */
+document.getElementById("navBack").onclick = function(){
+  const padre = _PADRE[_navCur];
+  if(!padre) return;
+  if(padre==="conta") showContaScreen();
+  else showScreen(padre);
+};
+document.getElementById("navHome").onclick = function(){
+  showScreen("home");
+};
+document.getElementById("navLogout").onclick = function(){
+  logout();
+};
 </script>
 </body>
 </html>
