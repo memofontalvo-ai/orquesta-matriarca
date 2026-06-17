@@ -77,6 +77,8 @@
   .mc-arrow{font-size:26px;color:#C9A24B;font-weight:300}
   .home-lock{margin-top:24px;background:none;border:none;color:#8a7f63;font-family:inherit;font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
   .home-lock:hover{color:#C9A24B}
+  /* Los botones de cerrar sesión por pantalla se ocultan — la barra global los reemplaza */
+  #logout, #musLogout, #contaLogout, #bancosLogout, #contaMenuLogout, #validarBack{display:none}
 
   .back-menu{width:34px;height:34px;border-radius:9px;border:none;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;display:grid;place-items:center;flex:none;transition:.13s}
   .back-menu:hover{background:rgba(224,162,59,.3)}
@@ -454,6 +456,36 @@
     .shift-grid{grid-template-columns:1fr}
     .liq-wrap{overflow-x:auto}
   }
+  /* ── Barra de navegación global inferior ── */
+  .nav-bar{
+    position:fixed;bottom:0;left:0;right:0;
+    background:rgba(26,27,30,.96);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border-top:1px solid rgba(224,162,59,.18);
+    display:none;
+    align-items:center;justify-content:space-between;
+    padding:10px 20px calc(10px + env(safe-area-inset-bottom));
+    z-index:1000;
+    gap:8px;
+  }
+  .nav-bar.visible{display:flex}
+  .nav-bar-btn{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:none;cursor:pointer;font-family:inherit;
+    color:#9A9CA6;font-size:10px;font-weight:700;letter-spacing:.04em;
+    padding:6px 14px;border-radius:10px;transition:.15s;min-width:64px;
+  }
+  .nav-bar-btn:hover{background:rgba(224,162,59,.1);color:#C2832A}
+  .nav-bar-btn.home-btn{color:#C2832A}
+  .nav-bar-btn.home-btn svg{stroke:#C2832A}
+  .nav-bar-btn.logout-btn{color:#C0473B}
+  .nav-bar-btn.logout-btn svg{stroke:#C0473B}
+  .nav-bar-sep{width:1px;height:36px;background:rgba(224,162,59,.15);flex:none}
+  /* espacio para que el contenido no quede detrás de la barra */
+  .screen.active .conta-wrap,.screen.active .mus-wrap,.screen.active .home-box{
+    padding-bottom:80px
+  }
+
   /* ── Indicadores ── */
   .ind-kpi{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px;text-align:center}
   .ind-kpi-val{font-size:20px;font-weight:900;color:var(--amber-deep);line-height:1.1}
@@ -3298,10 +3330,100 @@ function renderIndicadores(){
   `;
 }
 
-el("indicBack").onclick=()=>showScreen("home");
-el("goIndicadores").onclick=showIndicadores;
+/* ============================================================
+   NAVEGACIÓN GLOBAL — barra inferior
+   ============================================================ */
+const NAV_MAP = {
+  "home"              : { padre: null,           home: false  },
+  "app"               : { padre: "home",         home: true   },
+  "musico"            : { padre: "home",         home: true   },
+  "conta"             : { padre: "home",         home: true   },
+  "conta-validar"     : { padre: "conta",        home: true   },
+  "conta-bancos"      : { padre: "conta",        home: true   },
+  "validar"           : { padre: "home",         home: true   },
+  "indicadores"       : { padre: "home",         home: true   },
+};
+
+let _currentScreen = "login";
+
+/* Override showScreen para actualizar la barra */
+const _origShowScreen = showScreen;
+showScreen = function(name){
+  _origShowScreen(name);
+  _currentScreen = name;
+  updateNavBar(name);
+};
+
+function updateNavBar(name){
+  const bar = el("globalNavBar");
+  if(!bar) return;
+  /* Ocultar en login y home */
+  if(!name || name === "login"){
+    bar.classList.remove("visible");
+    return;
+  }
+  bar.classList.add("visible");
+  const cfg = NAV_MAP[name];
+  const backBtn = el("navBack");
+  const homeBtn = el("navHome");
+  /* Botón regresar: mostrar si tiene padre */
+  if(cfg && cfg.padre){
+    backBtn.style.display = "flex";
+    el("nav-bar-sep-back") && (el("nav-bar-sep-back").style.display="block");
+  } else {
+    backBtn.style.display = "none";
+  }
+  /* Botón home: ocultar si YA estamos en home o si es la app sin home */
+  if(name === "home"){
+    homeBtn.style.display = "none";
+  } else {
+    homeBtn.style.display = "flex";
+  }
+}
+
+el("navBack").onclick = function(){
+  const cfg = NAV_MAP[_currentScreen];
+  if(!cfg || !cfg.padre) return;
+  const padre = cfg.padre;
+  /* Lógica de regreso según pantalla */
+  if(padre === "conta") showContaScreen();
+  else if(padre === "home") showScreen("home");
+  else showScreen(padre);
+};
+
+el("navHome").onclick = function(){
+  /* Ir siempre al home sin cerrar sesión */
+  showScreen("home");
+};
+
+el("navLogout").onclick = logout;
+
+/* Inicializar la barra al cargar */
+updateNavBar("login");
+
+/* ============================================================
+   FIN NAVEGACIÓN GLOBAL
+   ============================================================ */
 
 initApp();
 </script>
+<!-- ============ BARRA DE NAVEGACIÓN GLOBAL ============ -->
+<div class="nav-bar" id="globalNavBar">
+  <button class="nav-bar-btn" id="navBack">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    REGRESAR
+  </button>
+  <div class="nav-bar-sep"></div>
+  <button class="nav-bar-btn home-btn" id="navHome">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2832A" stroke-width="2.2"><path d="M3 11l9-7 9 7M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/></svg>
+    INICIO
+  </button>
+  <div class="nav-bar-sep"></div>
+  <button class="nav-bar-btn logout-btn" id="navLogout">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C0473B" stroke-width="2.2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+    SALIR
+  </button>
+</div>
+
 </body>
 </html>
