@@ -991,6 +991,9 @@
         <div class="propose-banner" id="proposeBanner" style="display:none">Estás <b>proponiendo</b> un músico. Llena sus datos y marca los grupos en los que tocaría. <b>El administrador le asignará la tarifa y aprobará la contratación.</b></div>
         <div class="grid2">
           <div class="field"><label for="fNombre">Nombre completo</label><input id="fNombre" type="text" placeholder="Ej: Efrén Ospina" autocomplete="off"></div>
+          <div class="field"><label for="fInstrumento">Instrumento</label><input id="fInstrumento" type="text" placeholder="Ej: Trompeta, Guitarra, Bajo..." autocomplete="off" list="instrumentos-list">
+            <datalist id="instrumentos-list"><option value="Trompeta"><option value="Guitarra"><option value="Bajo eléctrico"><option value="Batería"><option value="Piano"><option value="Teclado"><option value="Violín"><option value="Saxofón"><option value="Trombón"><option value="Percusión"><option value="Voz principal"><option value="Coros"><option value="DJ"><option value="Acordeón"><option value="Flauta"><option value="Contrabajo"><option value="Gaita"></datalist>
+          </div>
           <div class="field"><label for="fCedula">Cédula</label><input id="fCedula" type="text" inputmode="numeric" placeholder="Ej: 1098765432" autocomplete="off"></div>
           <div class="field"><label for="fTel">Teléfono (WhatsApp)</label><input id="fTel" type="text" inputmode="tel" placeholder="Ej: 300 366 7167" autocomplete="off"></div>
           <div class="field"><label for="fBanco">Banco</label><input id="fBanco" type="text" list="bancos" placeholder="Ej: Bancolombia" autocomplete="off">
@@ -1386,7 +1389,7 @@ function setTarifa(i,inp){ const f=FORMATOS[i]; const n=cleanNum(inp.value);
   if(n==null){delete formTarifas[f];inp.value="";return;}
   formTarifas[f]=n; inp.value=n.toLocaleString("es-CO");
   const L=inp.value.length; try{inp.setSelectionRange(L,L);}catch(e){} }
-function setForm(m){el("fNombre").value=m.nombre||m.alias||"";el("fCedula").value=m.cedula||"";el("fTel").value=m.telefono||"";el("fBanco").value=m.banco||"";el("fCuenta").value=m.cuenta||"";el("formErr").textContent="";formSel=new Set(m.formatos||[]);formTarifas=Object.assign({},m.tarifas||{});renderFmtPicker();}
+function setForm(m){el("fNombre").value=m.nombre||m.alias||"";el("fInstrumento").value=m.instrumento||"";el("fCedula").value=m.cedula||"";el("fTel").value=m.telefono||"";el("fBanco").value=m.banco||"";el("fCuenta").value=m.cuenta||"";el("formErr").textContent="";formSel=new Set(m.formatos||[]);formTarifas=Object.assign({},m.tarifas||{});renderFmtPicker();}
 function closeModal(){el("overlay").classList.remove("open");}
 function save(approve){
   const nombre=el("fNombre").value.trim();
@@ -1406,6 +1409,7 @@ function save(approve){
   const rec={
     alias:nombre,
     nombre,
+    instrumento:el("fInstrumento").value.trim(),
     cedula:el("fCedula").value.trim(),
     telefono:el("fTel").value.trim(),
     banco:el("fBanco").value.trim(),
@@ -1857,6 +1861,7 @@ function sendApproval(){
 function openRoster(){ renderRoster(); el("rosterOverlay").classList.add("show"); }
 function closeRoster(){ el("rosterOverlay").classList.remove("show"); }
 function renderRoster(){
+  const isDir = currentUser && (currentUser.rol==="director" || currentUser.rol==="admin");
   const rows=data.slice().sort((a,b)=>{
     const pa=(a.estado==="propuesto")?1:0, pb=(b.estado==="propuesto")?1:0;
     if(pa!==pb) return pa-pb;
@@ -1869,13 +1874,84 @@ function renderRoster(){
     : rows.map(m=>{
         const prop=(m.estado==="propuesto");
         const datos=[m.cedula?("C.C. "+m.cedula):"", m.telefono?("📱 "+m.telefono):""].filter(Boolean).join("  ·  ");
-        return `<div class="roster-card ${prop?'prop':''}">
-          <div class="roster-name">${esc(m.nombre||m.alias||"")}${prop?' <span class="prop-badge">PROPUESTO</span>':''}</div>
-          ${datos?`<div class="roster-sub">${esc(datos)}</div>`:''}
-          <div class="roster-bank">${esc(m.banco||'—')} ${esc(m.cuenta||'')}</div>
-          <div class="roster-tar">${tarifaChips(m)}</div>
+        const instrTag = m.instrumento
+          ? `<span style="display:inline-block;background:#E8F0FE;color:#404f8f;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-top:4px">🎵 ${esc(m.instrumento)}</span>`
+          : '';
+        const editBtn = isDir
+          ? `<button onclick="rosterEditInline(${m.id})" style="background:none;border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:6px">✏️ Editar</button>`
+          : '';
+        return `<div class="roster-card ${prop?'prop':''}" id="rcard-${m.id}">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+            <div style="flex:1">
+              <div class="roster-name">${esc(m.nombre||m.alias||"")}${prop?' <span class="prop-badge">PROPUESTO</span>':''}</div>
+              ${instrTag}
+              ${datos?`<div class="roster-sub" style="margin-top:4px">${esc(datos)}</div>`:''}
+              <div class="roster-bank">${esc(m.banco||'—')} ${esc(m.cuenta||'')}</div>
+              <div class="roster-tar">${tarifaChips(m)}</div>
+            </div>
+            <div>${editBtn}</div>
+          </div>
+          <div id="rinline-${m.id}" style="display:none"></div>
         </div>`;
       }).join("");
+}
+
+let _rosterEditId = null;
+function rosterEditInline(id){
+  /* Si ya está abierto, ciérralo */
+  if(_rosterEditId===id){
+    el("rinline-"+id).style.display="none";
+    el("rinline-"+id).innerHTML="";
+    _rosterEditId=null; return;
+  }
+  /* Cerrar el anterior si había otro abierto */
+  if(_rosterEditId){ el("rinline-"+_rosterEditId).style.display="none"; el("rinline-"+_rosterEditId).innerHTML=""; }
+  _rosterEditId=id;
+  const m=data.find(x=>x.id===id); if(!m) return;
+  const isDirOnly = currentUser && currentUser.rol==="director";
+  const panel = el("rinline-"+id);
+  panel.innerHTML=`
+    <div style="margin-top:12px;background:#F8F6F0;border-radius:10px;padding:14px;border:1px solid var(--line)">
+      ${isDirOnly?`<div style="font-size:11px;color:#9a6018;background:#FEF3E2;border-radius:7px;padding:7px 10px;margin-bottom:10px">
+        <b>Edición limitada:</b> banco, cuenta y tarifas solo los cambia el administrador.
+      </div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:3px">NOMBRE</label>
+          <input id="re-nombre-${id}" value="${esc(m.nombre||m.alias||'')}" style="width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13px;font-family:inherit;background:#fff"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:3px">INSTRUMENTO</label>
+          <input id="re-instr-${id}" value="${esc(m.instrumento||'')}" placeholder="Trompeta, Guitarra..." list="instrumentos-list" style="width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13px;font-family:inherit;background:#fff"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:3px">CÉDULA</label>
+          <input id="re-cedula-${id}" value="${esc(m.cedula||'')}" inputmode="numeric" style="width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13px;font-family:inherit;background:#fff"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:3px">TELÉFONO</label>
+          <input id="re-tel-${id}" value="${esc(m.telefono||'')}" inputmode="tel" style="width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:13px;font-family:inherit;background:#fff"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="rosterSaveInline(${id})" style="flex:1;background:#1A1B1E;color:#E0A23B;border:none;border-radius:8px;padding:9px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">Guardar ✓</button>
+        <button onclick="rosterCancelInline(${id})" style="background:none;border:1px solid var(--line);border-radius:8px;padding:9px 14px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;color:var(--muted)">Cancelar</button>
+      </div>
+    </div>`;
+  panel.style.display="block";
+}
+
+function rosterSaveInline(id){
+  const m=data.find(x=>x.id===id); if(!m) return;
+  const nombre=document.getElementById("re-nombre-"+id).value.trim();
+  if(!nombre){ toast("El nombre es obligatorio"); return; }
+  m.nombre=nombre; m.alias=nombre;
+  m.instrumento=document.getElementById("re-instr-"+id).value.trim();
+  m.cedula=document.getElementById("re-cedula-"+id).value.trim();
+  m.telefono=document.getElementById("re-tel-"+id).value.trim();
+  m.updatedAt=Date.now();
+  lsSaveM(); fsSync(m);
+  _rosterEditId=null;
+  renderRoster();
+  toast("✓ Datos guardados");
+}
+
+function rosterCancelInline(id){
+  el("rinline-"+id).style.display="none";
+  el("rinline-"+id).innerHTML="";
+  _rosterEditId=null;
 }
 function aprobarMiPago(){
   const k=keyOf(curMonday);
