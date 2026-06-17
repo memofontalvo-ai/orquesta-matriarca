@@ -454,6 +454,13 @@
     .shift-grid{grid-template-columns:1fr}
     .liq-wrap{overflow-x:auto}
   }
+  /* ── Indicadores ── */
+  .ind-kpi{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+  .ind-kpi-val{font-size:20px;font-weight:900;color:var(--amber-deep);line-height:1.1}
+  .ind-kpi-lbl{font-size:11px;color:var(--muted);font-weight:600;margin-top:3px;line-height:1.3}
+  .ind-card{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px}
+  .ind-card-h{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:10px;letter-spacing:.02em}
+
   .btn-back{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--amber-deep);font-weight:700;font-size:14px;cursor:pointer;padding:0 0 12px;font-family:inherit}
   .btn-back svg{flex:none}
   .conta-wrap{max-width:620px;margin:0 auto;padding:24px 16px 40px;display:flex;flex-direction:column;gap:14px;min-height:100vh;background:var(--paper)}
@@ -579,6 +586,13 @@
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/><path d="M7.5 13h2m3 0h2m-7 4h2m3 0h2"/></svg>
             </span>
             <span class="mc-txt"><b id="planillaCardTitle">Liquidar semana</b><small id="planillaCardSub">Marcar turnos y calcular pagos</small></span>
+            <span class="mc-arrow">›</span>
+          </button>
+          <button class="menu-card" id="goIndicadores" style="display:none">
+            <span class="mc-ico" style="background:linear-gradient(135deg,#C0473B,#9a3530)">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+            </span>
+            <span class="mc-txt"><b>Indicadores de pagos</b><small>Análisis, tendencias y estadísticas de la nómina</small></span>
             <span class="mc-arrow">›</span>
           </button>
           <button class="menu-card" id="goUsuarios">
@@ -717,12 +731,28 @@
         <button class="btn btn-primary" id="contaWABloque" style="background:#25D366;color:#fff" onclick="enviarWABloque()">📱 WhatsApp a pagados</button>
         <button class="btn btn-primary" id="contaReporte" style="background:var(--ink);color:#fff" onclick="generarReporteImagen()">📄 Guardar reporte</button>
       </div>
+      <div id="contaBloqueoBar" style="display:none;margin:10px 0"></div>
       <div class="conta-body" id="contaBody"></div>
       <div class="conta-total-bar">
         <span>Total pendiente de pago</span>
         <b id="contaTot">$0</b>
       </div>
       <button class="home-lock" id="contaLogout">Cerrar sesión</button>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA: INDICADORES ============ -->
+  <section class="screen" id="screen-indicadores">
+    <div class="conta-wrap">
+      <div class="conta-top">
+        <button id="indicBack" class="btn-back">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+          Menú principal
+        </button>
+        <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">INDICADORES</span></div>
+        <p class="home-hi">Análisis de pagos</p>
+      </div>
+      <div class="conta-body" id="indicBody" style="padding-bottom:30px"></div>
     </div>
   </section>
 
@@ -1957,11 +1987,14 @@ let USERS=[
 let currentUser=null;
 let activeMusicoId=null;
 function showScreen(name){
-  ["login","home","musico","app","conta","conta-validar","conta-bancos","validar","bancos"].forEach(s=>{ const e=el("screen-"+s); if(e) e.classList.toggle("active",s===name); });
+  ["login","home","musico","app","conta","conta-validar","conta-bancos","validar","bancos","indicadores"].forEach(s=>{ const e=el("screen-"+s); if(e) e.classList.toggle("active",s===name); });
   window.scrollTo(0,0);
 }
 function applyRole(){
   document.body.dataset.rol = currentUser ? currentUser.rol : "";
+  const isAdmin = currentUser && currentUser.rol === "admin";
+  const indBtn = el("goIndicadores");
+  if(indBtn) indBtn.style.display = isAdmin ? "flex" : "none";
 }
 function entrar(){
   const uRaw=el("usr").value.trim();
@@ -2995,6 +3028,279 @@ async function initApp(){
   renderCloudBar();
 }
 el("btnVerify").onclick=verifyCloud;
+
+/* ============================================================
+   MÓDULO: BLOQUEO DE SEMANA
+   Solo admin — desde Reporte de pagos (conta-validar)
+   ============================================================ */
+function isWeekLocked(weekMonday){
+  const k = keyOf(weekMonday||contaWeekMonday);
+  return !!(weeks[k] && weeks[k].pagosLocked);
+}
+
+function renderBloqueoBar(){
+  const bar = el("contaBloqueoBar"); if(!bar) return;
+  const isAdmin = currentUser && currentUser.rol==="admin";
+  if(!isAdmin){ bar.style.display="none"; return; }
+
+  const locked = isWeekLocked(contaWeekMonday);
+  const lista = computeContaPagos();
+  const todosPagados = lista.length > 0 && lista.every(x=>x.pagado);
+
+  if(locked){
+    bar.style.display="block";
+    bar.innerHTML=`<div style="background:#1A1B1E;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <div style="color:#E0A23B;font-weight:800;font-size:13px;letter-spacing:.04em">🔒 SEMANA BLOQUEADA</div>
+        <div style="color:#9A9CA6;font-size:12px;margin-top:2px">Proceso completado. Solo el administrador puede desbloquear.</div>
+      </div>
+      <button onclick="desbloquearSemana()" style="background:#C0473B;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap">🔓 Desbloquear</button>
+    </div>`;
+  } else if(todosPagados){
+    bar.style.display="block";
+    bar.innerHTML=`<div style="background:rgba(62,142,110,.12);border:1.5px solid #3E8E6E;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <div style="color:#2c6b52;font-weight:800;font-size:13px">✅ Todo pagado — proceso completo</div>
+        <div style="color:#3E8E6E;font-size:12px;margin-top:2px">Puedes bloquear esta semana para que no se pueda editar.</div>
+      </div>
+      <button onclick="bloquearSemana()" style="background:#1A1B1E;color:#E0A23B;border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap">🔒 Bloquear semana</button>
+    </div>`;
+  } else {
+    bar.style.display="none";
+  }
+}
+
+function bloquearSemana(){
+  const lista = computeContaPagos();
+  const sinPagar = lista.filter(x=>!x.pagado);
+  if(sinPagar.length){
+    alert("⚠ No se puede bloquear. Faltan "+sinPagar.length+" músico"+(sinPagar.length===1?"":"s")+" sin pago realizado.");
+    return;
+  }
+  if(!confirm("¿Bloquear esta semana?\n\nEsto impedirá cualquier edición. Solo tú (admin) podrás desbloquearla.")) return;
+  const k = keyOf(contaWeekMonday);
+  weeks[k] = weeks[k]||{days:Array(7).fill(null).map(()=>({pres:[],locked:false})),extra:{}};
+  weeks[k].pagosLocked = true;
+  weeks[k].pagosLockedAt = Date.now();
+  persistW();
+  renderContabilidad();
+  toast("🔒 Semana bloqueada exitosamente");
+}
+
+function desbloquearSemana(){
+  if(!confirm("¿Desbloquear esta semana?\n\nSolo hazlo si necesitas hacer una corrección.")) return;
+  const k = keyOf(contaWeekMonday);
+  if(weeks[k]){
+    delete weeks[k].pagosLocked;
+    delete weeks[k].pagosLockedAt;
+  }
+  persistW();
+  renderContabilidad();
+  toast("🔓 Semana desbloqueada");
+}
+
+/* Aplicar bloqueo: impedir ediciones en semanas bloqueadas */
+const _origPersistW = persistW;
+function persistW(){
+  lsSaveW();
+  const k = keyOf(curMonday);
+  if(weeks[k]) pushWeekCloud(k);
+}
+
+/* Hook para mostrar la barra de bloqueo cada vez que renderiza contabilidad */
+const _origRenderContabilidad = renderContabilidad;
+renderContabilidad = function(){
+  _origRenderContabilidad();
+  renderBloqueoBar();
+  /* Si está bloqueada, deshabilitar los botones de acción */
+  const locked = isWeekLocked(contaWeekMonday);
+  if(locked){
+    const actDiv = el("contaActions");
+    if(actDiv) actDiv.style.display="none";
+  }
+};
+
+/* ============================================================
+   MÓDULO: INDICADORES DE PAGOS
+   Solo admin
+   ============================================================ */
+function showIndicadores(){
+  renderIndicadores();
+  showScreen("indicadores");
+}
+
+function renderIndicadores(){
+  const body = el("indicBody"); if(!body) return;
+  body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted)">Calculando indicadores…</div>`;
+
+  /* Recopilar datos de todas las semanas */
+  const semanasKeys = Object.keys(weeks).sort();
+  if(!semanasKeys.length){
+    body.innerHTML=`<div class="conta-empty"><b>No hay datos de semanas todavía.</b></div>`;
+    return;
+  }
+
+  /* ── Estructuras de análisis ── */
+  const totalPorSemana = [];   /* {label, total, pagados, nMusicos} */
+  const pagoPorMusico  = {};   /* id → {nombre, total, semanas} */
+  const pagoPorDia     = {0:0,1:0,2:0,3:0,4:0,5:0,6:0}; /* lun-dom */
+  const pagoPorFormato = {};   /* formato → total */
+  let   granTotal = 0;
+
+  semanasKeys.forEach(k=>{
+    const wk = weeks[k]; if(!wk||!wk.days) return;
+    const mon = new Date(k); /* k es "YYYY-MM-DD" */
+    const label = cap(fmt(mon,{day:'numeric',month:'short'}))+" – "+fmt(addDays(mon,6),{day:'numeric',month:'short',year:'numeric'});
+    let semTotal=0, nPag=0, nMus=new Set();
+
+    wk.days.forEach((day,di)=>{
+      day.pres.forEach(p=>{
+        if(!p.fmt || p.status!=="aprobada") return;
+        p.ids.forEach(id=>{
+          const m=data.find(x=>x.id===id); if(!m) return;
+          const r=effRate(p,m,p.fmt); const val=(r!=null?r:0);
+          const ex=(wk.extra&&wk.extra[id])||{};
+          /* solo contar si fue pagado */
+          if(!ex.contaPagado) return;
+          semTotal+=val;
+          granTotal+=val;
+          nMus.add(id);
+          pagoPorDia[di]=(pagoPorDia[di]||0)+val;
+          pagoPorFormato[p.fmt]=(pagoPorFormato[p.fmt]||0)+val;
+          if(!pagoPorMusico[id]) pagoPorMusico[id]={nombre:m.alias||m.nombre,total:0,semanas:0};
+          pagoPorMusico[id].total+=val;
+        });
+      });
+    });
+
+    /* bonos y descuentos */
+    if(wk.extra) Object.entries(wk.extra).forEach(([id,ex])=>{
+      if(!ex.contaPagado) return;
+      if(ex.bono){ semTotal+=(ex.bono||0); granTotal+=(ex.bono||0); if(pagoPorMusico[id]) pagoPorMusico[id].total+=(ex.bono||0); }
+      if(ex.desc){ semTotal-=(ex.desc||0); granTotal-=(ex.desc||0); if(pagoPorMusico[id]) pagoPorMusico[id].total-=(ex.desc||0); }
+      nPag++;
+      if(pagoPorMusico[id]) pagoPorMusico[id].semanas++;
+    });
+
+    if(semTotal>0) totalPorSemana.push({k,label,total:semTotal,pagados:nPag,nMusicos:nMus.size});
+  });
+
+  if(!totalPorSemana.length){
+    body.innerHTML=`<div class="conta-empty"><b>Aún no hay pagos realizados para analizar.</b><br>Los indicadores aparecen cuando Bancos procese los primeros pagos.</div>`;
+    return;
+  }
+
+  /* ── Cálculos de resumen ── */
+  const semanaMax = totalPorSemana.reduce((a,b)=>b.total>a.total?b:a);
+  const semanaMin = totalPorSemana.reduce((a,b)=>b.total<a.total?b:a);
+  const promSemana = Math.round(granTotal/totalPorSemana.length);
+  const topMusicos = Object.entries(pagoPorMusico).sort((a,b)=>b[1].total-a[1].total).slice(0,5);
+  const diaLabels  = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+  const diaMax     = Object.entries(pagoPorDia).sort((a,b)=>b[1]-a[1])[0];
+  const topFormatos= Object.entries(pagoPorFormato).sort((a,b)=>b[1]-a[1]).slice(0,4);
+
+  /* ── Barras SVG inline para semanas ── */
+  const maxSem = Math.max(...totalPorSemana.map(s=>s.total));
+  const barW = 220, barH = 8;
+  const semanaBars = totalPorSemana.slice(-8).map(s=>{
+    const pct = maxSem>0 ? (s.total/maxSem)*barW : 0;
+    const isCurrent = s.k===keyOf(mondayOf(new Date()));
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span style="color:var(--muted)">${s.label}${isCurrent?' <b style="color:#C2832A">← esta</b>':''}</span>
+        <b style="color:var(--amber-deep)">${cop(s.total)}</b>
+      </div>
+      <div style="background:#E7E4DA;border-radius:4px;height:${barH}px;overflow:hidden">
+        <div style="background:${isCurrent?'#C2832A':'#3E8E6E'};height:${barH}px;width:${Math.round(pct)}px;border-radius:4px;transition:.3s"></div>
+      </div>
+    </div>`;
+  }).join("");
+
+  /* ── HTML del dashboard ── */
+  body.innerHTML = `
+
+    <!-- KPIs principales -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="ind-kpi"><div class="ind-kpi-val">${cop(granTotal)}</div><div class="ind-kpi-lbl">Total pagado histórico</div></div>
+      <div class="ind-kpi"><div class="ind-kpi-val">${totalPorSemana.length}</div><div class="ind-kpi-lbl">Semanas con pagos</div></div>
+      <div class="ind-kpi"><div class="ind-kpi-val">${cop(promSemana)}</div><div class="ind-kpi-lbl">Promedio por semana</div></div>
+      <div class="ind-kpi"><div class="ind-kpi-val">${Object.keys(pagoPorMusico).length}</div><div class="ind-kpi-lbl">Músicos pagados</div></div>
+    </div>
+
+    <!-- Semana mayor / menor -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="ind-kpi" style="border-color:#3E8E6E">
+        <div style="font-size:10px;font-weight:700;color:#3E8E6E;letter-spacing:.06em;margin-bottom:4px">📈 SEMANA MAYOR</div>
+        <div class="ind-kpi-val" style="color:#3E8E6E">${cop(semanaMax.total)}</div>
+        <div class="ind-kpi-lbl">${semanaMax.label}</div>
+      </div>
+      <div class="ind-kpi" style="border-color:#C0473B">
+        <div style="font-size:10px;font-weight:700;color:#C0473B;letter-spacing:.06em;margin-bottom:4px">📉 SEMANA MENOR</div>
+        <div class="ind-kpi-val" style="color:#C0473B">${cop(semanaMin.total)}</div>
+        <div class="ind-kpi-lbl">${semanaMin.label}</div>
+      </div>
+    </div>
+
+    <!-- Tendencia últimas 8 semanas -->
+    <div class="ind-card" style="margin-bottom:16px">
+      <div class="ind-card-h">📊 Tendencia — últimas semanas pagadas</div>
+      ${semanaBars||'<div style="color:var(--muted);font-size:13px">Sin datos suficientes.</div>'}
+    </div>
+
+    <!-- Día de la semana con más pagos -->
+    <div class="ind-card" style="margin-bottom:16px">
+      <div class="ind-card-h">📅 Día con mayor volumen de pagos</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
+        ${diaLabels.map((d,i)=>{
+          const v=pagoPorDia[i]||0;
+          const pct=maxSem>0?Math.round((v/maxSem)*100*0.7):0;
+          const isMax=String(i)===diaMax[0];
+          return `<div style="text-align:center;flex:1">
+            <div style="height:60px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:4px">
+              <div style="width:28px;background:${isMax?'#C2832A':'#E7E4DA'};border-radius:4px 4px 0 0;height:${Math.max(pct,4)}%;transition:.3s"></div>
+            </div>
+            <div style="font-size:10px;font-weight:${isMax?'800':'500'};color:${isMax?'#C2832A':'var(--muted)'}">${d}</div>
+          </div>`;
+        }).join("")}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center">El día con más pagos es <b style="color:#C2832A">${diaLabels[Number(diaMax[0])]}</b> — ${cop(diaMax[1])} acumulado</div>
+    </div>
+
+    <!-- Top músicos -->
+    <div class="ind-card" style="margin-bottom:16px">
+      <div class="ind-card-h">🎵 Top músicos por total pagado</div>
+      ${topMusicos.map(([id,d],i)=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:26px;height:26px;border-radius:50%;background:${['#C2832A','#3E8E6E','#5B6CB0','#8A5BB0','#C0473B'][i]};color:#fff;font-weight:800;font-size:11px;display:grid;place-items:center">${i+1}</div>
+            <span style="font-weight:700;font-size:14px">${esc(d.nombre)}</span>
+          </div>
+          <b style="color:#C2832A">${cop(d.total)}</b>
+        </div>`).join("")}
+    </div>
+
+    <!-- Top formatos -->
+    <div class="ind-card" style="margin-bottom:16px">
+      <div class="ind-card-h">🎸 Formatos con mayor costo de nómina</div>
+      ${topFormatos.map(([fmt,v],i)=>{
+        const pct=Math.round((v/(topFormatos[0][1]||1))*100);
+        return `<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+            <span style="font-weight:700">${esc(fmt)}</span><b style="color:#C2832A">${cop(v)}</b>
+          </div>
+          <div style="background:#E7E4DA;border-radius:4px;height:7px">
+            <div style="background:#5B6CB0;height:7px;width:${pct}%;border-radius:4px"></div>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+
+  `;
+}
+
+el("indicBack").onclick=()=>showScreen("home");
+el("goIndicadores").onclick=showIndicadores;
+
 initApp();
 </script>
 </body>
