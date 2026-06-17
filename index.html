@@ -667,7 +667,10 @@
   <section class="screen" id="screen-musico">
     <div class="mus-wrap">
       <div class="mus-top">
-        <button id="musBack" class="mus-back">‹ Inicio</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:8px">
+          <button id="musBack" class="mus-back">‹ Inicio</button>
+          <button class="btn-back" onclick="logout()" style="color:#C0473B;font-size:12px">Cerrar sesion</button>
+        </div>
         <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">MI PAGO SEMANAL</span></div>
         <p class="home-hi" id="musHi">Hola</p>
       </div>
@@ -760,7 +763,13 @@
   <section class="screen" id="screen-prog">
     <div class="conta-wrap">
       <div class="conta-top">
-        <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">PROGRAMACIÓN</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <button id="progBack" class="btn-back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+            Menu principal
+          </button>
+          <button class="btn-back" onclick="logout()" style="color:#C0473B">Cerrar sesion</button>
+        </div>
+        <div class="home-brand"><span class="eyebrow">ORQUESTA MATRIARCA</span><span class="wordmark sm">PROGRAMACION</span></div>
         <p class="home-hi" id="progHi">Semana en curso</p>
       </div>
       <div class="conta-week-nav">
@@ -2914,6 +2923,8 @@ el("validarPrev").onclick=()=>{validarWeekMonday=addDays(validarWeekMonday,-7);r
 el("validarNext").onclick=()=>{validarWeekMonday=addDays(validarWeekMonday,7);renderValidarPagos();};
 el("validarToday").onclick=()=>{validarWeekMonday=mondayOf(new Date());renderValidarPagos();};
 el("validarBack").onclick=()=>showScreen("home");
+el("progBack").onclick=()=>showScreen("home");
+el("indicBack").onclick=()=>showScreen("home");
 el("validarBackTop").onclick=()=>showScreen("home");
 el("goValidarPagos").onclick=showValidarPagos;
 
