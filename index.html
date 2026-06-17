@@ -2396,21 +2396,35 @@ function renderContabilidad(){
     const ex=(wk.extra&&wk.extra[item.id])||{};
     const waSent = !!(ex.waSent);
     const waSentDate = ex.waSentAt ? ` · ${fmtDate(ex.waSentAt)}` : "";
-    const sel = contaSelectedIds.has(item.id);
-    const chk = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>`;
     const pagoFecha = item.pagadoAt ? ` · ${fmtDate(item.pagadoAt)}` : "";
-    /* Botones según estado — Contabilidad NO paga, solo envía WhatsApp cuando ya está pagado */
-    let botonesHtml = "";
+
+    /* ── Barra de estado ── */
+    let estadoHtml = "";
+    let botonHtml  = "";
+
     if(!item.pagado){
-      botonesHtml = `<span style="font-size:.78rem;color:var(--amber-deep);font-weight:700;font-style:italic">Pendiente de pago por Bancos</span>`;
+      /* Sin pago de Bancos: solo informar, sin acción */
+      estadoHtml = `<span style="color:var(--amber-deep);font-weight:700;font-size:.82rem">
+        ${item.musOk ? '✓ Aprobado por músico · ' : '⏳ Sin aprobar · '}
+        Pendiente de pago por Bancos
+      </span>`;
+      botonHtml = "";  /* SIN botón de WhatsApp */
+
     } else if(!waSent){
-      botonesHtml = `<button class="btn-pagar-uno btn-wa" onclick="abrirWA(${item.id})">📱 WhatsApp</button>`;
+      /* Pagado pero sin WhatsApp → habilitar botón */
+      estadoHtml = `<span class="conta-status-pagado">✅ Pago realizado${pagoFecha}</span>
+        <span style="font-size:.78rem;color:#C2832A;font-weight:600">⚠ WhatsApp pendiente</span>`;
+      botonHtml = `<button class="btn-pagar-uno btn-wa" onclick="abrirWA(${item.id})">📱 WhatsApp</button>`;
+
     } else {
-      botonesHtml = `<button class="btn-pagar-uno pagado-btn" disabled>WA enviado ✓</button>`;
+      /* Pagado y WhatsApp enviado → todo listo */
+      estadoHtml = `<span class="conta-status-pagado">✅ Pago realizado${pagoFecha}</span>
+        <span style="font-size:.78rem;color:#3E8E6E;font-weight:600">📱 WhatsApp enviado${waSentDate}</span>`;
+      botonHtml = `<button class="btn-pagar-uno pagado-btn" disabled>WA enviado ✓</button>`;
     }
-    return `<div class="conta-card ${sel?'selected':''} ${item.pagado?'pagado':''}" id="ccrd-${item.id}">
-      <div class="conta-card-head" onclick="${item.pagado?'':('toggleContaSel('+item.id+')')}">
-        <div class="conta-check">${chk}</div>
+
+    return `<div class="conta-card ${item.pagado?'pagado':''}" id="ccrd-${item.id}">
+      <div class="conta-card-head">
         <div class="conta-name-block">
           <div class="conta-alias">${esc(item.m.alias||item.m.nombre)}</div>
           <div class="conta-nombre">${esc(item.m.nombre||item.m.alias)}</div>
@@ -2426,15 +2440,8 @@ function renderContabilidad(){
         </div>
       </div>
       <div class="conta-status-bar">
-        <div style="display:flex;flex-direction:column;gap:3px;flex:1">
-          ${item.pagado
-            ? `<span class="conta-status-pagado">✓ Pagado${pagoFecha}</span>`
-            : `<span class="conta-status-pendiente">${item.musOk?'✓ Aprobado por músico':'⏳ Sin aprobar aún'} · Pendiente de pago</span>`}
-          ${waSent
-            ? `<span style="font-size:.78rem;color:#3E8E6E;font-weight:600">📱 WhatsApp enviado${waSentDate}</span>`
-            : item.pagado ? `<span style="font-size:.78rem;color:#C2832A;font-weight:600">⚠ WhatsApp pendiente de enviar</span>` : ''}
-        </div>
-        ${botonesHtml}
+        <div style="display:flex;flex-direction:column;gap:3px;flex:1">${estadoHtml}</div>
+        ${botonHtml}
       </div>
     </div>`;
   };
@@ -2571,14 +2578,22 @@ function pagarSeleccionados(){
 let _waBloqueIdx=0, _waBloqueIds=[];
 function enviarWABloque(){
   const lista = computeContaPagos();
-  /* pagados pero sin WA enviado */
   const k=keyOf(contaWeekMonday);
   const wk=weeks[k]||{extra:{}};
+  /* Solo los que Bancos ya pagó y aún no tienen WA enviado */
   _waBloqueIds = lista.filter(x=>{
     const ex=(wk.extra&&wk.extra[x.id])||{};
     return x.pagado && !ex.waSent;
   }).map(x=>x.id);
-  if(!_waBloqueIds.length){ toast("Todos los pagados ya tienen WhatsApp enviado"); return; }
+  if(!_waBloqueIds.length){
+    const hayPagados = lista.some(x=>x.pagado);
+    if(!hayPagados){
+      toast("⚠ No hay pagos realizados por Bancos aún. Espera a que Bancos procese los pagos.");
+    } else {
+      toast("✓ Todos los músicos pagados ya tienen WhatsApp enviado");
+    }
+    return;
+  }
   _waBloqueIdx=0;
   enviarSiguienteWA();
 }
@@ -2914,9 +2929,11 @@ function bancospagarUno(id){
   wk.extra[id].contaPagado=true;
   wk.extra[id].contaPagadoAt=Date.now();
   persistW();
-  /* también refrescar contabilidad si está abierta */
   renderBancos();
-  toast("✓ Pago registrado — ya aparece en Contabilidad");
+  /* refrescar contabilidad también si está montada */
+  try{ renderContabilidad(); }catch(e){}
+  const m=data.find(x=>x.id===id);
+  toast("✅ Pago realizado — "+(m?m.alias||m.nombre:id)+" ya aparece como pagado en Contabilidad");
 }
 
 function bancosDeshacer(id){
