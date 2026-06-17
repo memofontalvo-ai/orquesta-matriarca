@@ -753,6 +753,10 @@
       </div>
       <div id="contaBloqueoBar" style="display:none;margin:10px 0"></div>
       <div class="conta-body" id="contaBody"></div>
+      <div class="conta-total-bar" style="background:#2c6b52;color:#fff">
+        <span>Total pagado</span>
+        <b id="contaTotPagado">$0</b>
+      </div>
       <div class="conta-total-bar">
         <span>Total pendiente de pago</span>
         <b id="contaTot">$0</b>
@@ -817,6 +821,10 @@
       </div>
       <button id="bancosToday" class="mus-today">Esta semana</button>
       <div class="conta-body" id="bancosBody"></div>
+      <div class="conta-total-bar" style="background:#2c6b52;color:#fff">
+        <span>Total pagado</span>
+        <b id="bancosTotPagado">$0</b>
+      </div>
       <div class="conta-total-bar">
         <span>Total pendiente de pago</span>
         <b id="bancosTot">$0</b>
@@ -2539,9 +2547,11 @@ function renderContabilidad(){
     contaSelectedIds=new Set();
   }
 
-  let totalPend = 0;
+  let totalPend = 0, totalPagado = 0;
   pendientes.forEach(x=>totalPend+=x.total);
+  pagados.forEach(x=>totalPagado+=x.total);
   el("contaTot").textContent = cop(totalPend);
+  el("contaTotPagado").textContent = cop(totalPagado);
 
   const body = el("contaBody");
   if(!lista.length){
@@ -3032,9 +3042,11 @@ function renderBancos(){
   const pendientes = lista.filter(x=>!x.pagado);
   const pagados = lista.filter(x=>x.pagado);
 
-  let totalPend = 0;
+  let totalPend = 0, totalPagado = 0;
   pendientes.forEach(x=>totalPend+=x.total);
+  pagados.forEach(x=>totalPagado+=x.total);
   el("bancosTot").textContent = cop(totalPend);
+  el("bancosTotPagado").textContent = cop(totalPagado);
 
   const body = el("bancosBody");
   if(!lista.length){
