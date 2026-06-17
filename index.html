@@ -2417,10 +2417,13 @@ function renderContabilidad(){
       botonHtml = `<button class="btn-pagar-uno btn-wa" onclick="abrirWA(${item.id})">📱 WhatsApp</button>`;
 
     } else {
-      /* Pagado y WhatsApp enviado → todo listo */
+      /* Pagado y WhatsApp enviado → mostrar enviado pero permitir reenviar */
       estadoHtml = `<span class="conta-status-pagado">✅ Pago realizado${pagoFecha}</span>
         <span style="font-size:.78rem;color:#3E8E6E;font-weight:600">📱 WhatsApp enviado${waSentDate}</span>`;
-      botonHtml = `<button class="btn-pagar-uno pagado-btn" disabled>WA enviado ✓</button>`;
+      botonHtml = `<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+        <button class="btn-pagar-uno pagado-btn" disabled>WA enviado ✓</button>
+        <button onclick="reenviarWA(${item.id})" style="background:none;border:none;color:var(--amber-deep);font-size:.75rem;font-weight:700;cursor:pointer;text-decoration:underline;font-family:inherit">↩ No enviado / Reenviar</button>
+      </div>`;
     }
 
     return `<div class="conta-card ${item.pagado?'pagado':''}" id="ccrd-${item.id}">
@@ -2512,6 +2515,20 @@ function buildWAMsg(item){
   msg += `🏦 ${banco} · ${cuenta}`;
 
   return msg;
+}
+
+/* ── Quitar marca de WA enviado (por error) y volver a mostrar botón ── */
+function reenviarWA(id){
+  const k=keyOf(contaWeekMonday);
+  const wk=weeks[k]; if(!wk) return;
+  wk.extra=wk.extra||{};
+  if(wk.extra[id]){
+    delete wk.extra[id].waSent;
+    delete wk.extra[id].waSentAt;
+  }
+  persistW();
+  renderContabilidad();
+  toast("↩ Marcado como no enviado — ya puedes enviar el WhatsApp");
 }
 
 /* ── Abre WhatsApp y marca el envío ── */
