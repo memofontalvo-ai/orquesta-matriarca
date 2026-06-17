@@ -3382,9 +3382,9 @@ function renderProgramacion(){
     return;
   }
 
-  /* Conteo total de eventos aprobados */
+  /* Conteo total de eventos con formato asignado */
   let totalEventos = 0;
-  wk.days.forEach(d=>d.pres.forEach(p=>{ if(p.fmt && p.status==="aprobada") totalEventos++; }));
+  wk.days.forEach(d=>d.pres.forEach(p=>{ if(p.fmt) totalEventos++; }));
 
   let html = "";
 
@@ -3404,16 +3404,15 @@ function renderProgramacion(){
   let hayAlgo = false;
   wk.days.forEach((day, di)=>{
     const fecha = addDays(progMonday, di);
-    const aprobadas = day.pres.filter(p=>p.fmt && p.status==="aprobada");
-    const propuestas = day.pres.filter(p=>p.fmt && p.status==="propuesta");
-    if(!aprobadas.length && !propuestas.length) return;
+    /* Mostrar TODOS los eventos con formato, sin importar status */
+    const eventos = day.pres.filter(p=>p.fmt);
+    if(!eventos.length) return;
     hayAlgo = true;
 
     const esHoy = keyOf(fecha)===keyOf(new Date());
     const esFinde = di >= 5;
 
     html += `<div style="background:#fff;border-radius:14px;border:1.5px solid ${esHoy?'#C2832A':esFinde?'#5B6CB0':'var(--line)'};margin-bottom:12px;overflow:hidden">
-      <!-- Cabecera del día -->
       <div style="background:${esHoy?'#C2832A':esFinde?'#5B6CB0':'#1A1B1E'};padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
         <div>
           <span style="color:${esHoy||esFinde?'rgba(255,255,255,.7)':'#9A9CA6'};font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">${DNAMES[di]}</span>
@@ -3423,52 +3422,36 @@ function renderProgramacion(){
         ${esFinde&&!esHoy?'<span style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">FIN DE SEMANA</span>':''}
       </div>`;
 
-    /* Eventos aprobados */
-    aprobadas.forEach(p=>{
+    eventos.forEach(p=>{
       const color = FMT_COLORS[p.fmt] || "#73757E";
       const per = periodOf(p.hora);
+      const aprobada = p.status === "aprobada";
       const musicos = p.ids.map(id=>{
         const m = data.find(x=>x.id===id);
-        return m ? (m.alias||m.nombre) : "";
+        return m ? {nombre: m.alias||m.nombre, id: m.id} : null;
       }).filter(Boolean);
 
-      /* ¿Es el músico logueado? */
       const yoEstoy = currentUser && currentUser.musicoId && p.ids.includes(currentUser.musicoId);
 
       html += `<div style="padding:12px 16px;border-bottom:1px solid var(--line)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span style="background:${color}22;color:${color};font-weight:800;font-size:12px;padding:3px 10px;border-radius:20px">${esc(p.fmt)}</span>
-            ${yoEstoy?'<span style="background:#3E8E6E;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px">YO ESTOY ✓</span>':''}
+            ${!aprobada?'<span style="background:#FEF3E2;color:#9a6018;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">⏳ Por confirmar</span>':'<span style="background:#E8F5F0;color:#2c6b52;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">✓ Confirmado</span>'}
+            ${yoEstoy?'<span style="background:#3E8E6E;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px">YO ESTOY ✓</span>':''}
           </div>
-          <span style="color:#73757E;font-size:13px;font-weight:600">${p.hora?p.hora:'—'}${per?' · '+per:''}</span>
+          <span style="color:#73757E;font-size:13px;font-weight:700">${p.hora?p.hora:'—'}${per?' · '+per:''}</span>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${musicos.map(n=>{
-            const esMio = currentUser && currentUser.musicoId && data.find(x=>x.id===currentUser.musicoId && (x.alias===n||x.nombre===n));
-            return `<span style="background:${esMio?'#3E8E6E':'#F0EDE4'};color:${esMio?'#fff':'#3a3820'};font-size:12px;font-weight:${esMio?'800':'600'};padding:4px 10px;border-radius:20px">${esc(n)}</span>`;
+        ${musicos.length?`<div style="display:flex;flex-wrap:wrap;gap:5px">
+          ${musicos.map(({nombre,id})=>{
+            const esMio = currentUser && currentUser.musicoId && currentUser.musicoId===id;
+            return `<span style="background:${esMio?'#3E8E6E':'#F0EDE4'};color:${esMio?'#fff':'#3a3820'};font-size:12px;font-weight:${esMio?'800':'600'};padding:4px 10px;border-radius:20px">${esc(nombre)}</span>`;
           }).join("")}
-          ${musicos.length===0?'<span style="color:var(--muted);font-size:12px">Sin músicos asignados</span>':''}
-        </div>
+        </div>`:'<span style="color:var(--muted);font-size:12px">Sin músicos asignados</span>'}
       </div>`;
     });
 
-    /* Eventos propuestos (pendientes) — solo si no es músico */
-    if(propuestas.length && currentUser && currentUser.rol !== "musico"){
-      propuestas.forEach(p=>{
-        const color = FMT_COLORS[p.fmt] || "#73757E";
-        const per = periodOf(p.hora);
-        html += `<div style="padding:10px 16px;border-bottom:1px solid var(--line);opacity:.6">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <span style="background:${color}22;color:${color};font-weight:700;font-size:11px;padding:2px 8px;border-radius:20px">${esc(p.fmt)}</span>
-            <span style="background:#F5E6CC;color:#9a6018;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">⏳ Por confirmar</span>
-            <span style="color:#73757E;font-size:12px">${p.hora?p.hora:'—'}${per?' · '+per:''}</span>
-          </div>
-        </div>`;
-      });
-    }
-
-    html += `</div>`; /* cierre tarjeta día */
+    html += `</div>`;
   });
 
   if(!hayAlgo){
