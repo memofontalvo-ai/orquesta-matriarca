@@ -3331,82 +3331,12 @@ function renderIndicadores(){
 }
 
 /* ============================================================
-   NAVEGACIÓN GLOBAL — barra inferior
-   ============================================================ */
-const NAV_MAP = {
-  "home"              : { padre: null,           home: false  },
-  "app"               : { padre: "home",         home: true   },
-  "musico"            : { padre: "home",         home: true   },
-  "conta"             : { padre: "home",         home: true   },
-  "conta-validar"     : { padre: "conta",        home: true   },
-  "conta-bancos"      : { padre: "conta",        home: true   },
-  "validar"           : { padre: "home",         home: true   },
-  "indicadores"       : { padre: "home",         home: true   },
-};
-
-let _currentScreen = "login";
-
-/* Override showScreen para actualizar la barra */
-const _origShowScreen = showScreen;
-showScreen = function(name){
-  _origShowScreen(name);
-  _currentScreen = name;
-  updateNavBar(name);
-};
-
-function updateNavBar(name){
-  const bar = el("globalNavBar");
-  if(!bar) return;
-  /* Ocultar en login y home */
-  if(!name || name === "login"){
-    bar.classList.remove("visible");
-    return;
-  }
-  bar.classList.add("visible");
-  const cfg = NAV_MAP[name];
-  const backBtn = el("navBack");
-  const homeBtn = el("navHome");
-  /* Botón regresar: mostrar si tiene padre */
-  if(cfg && cfg.padre){
-    backBtn.style.display = "flex";
-    el("nav-bar-sep-back") && (el("nav-bar-sep-back").style.display="block");
-  } else {
-    backBtn.style.display = "none";
-  }
-  /* Botón home: ocultar si YA estamos en home o si es la app sin home */
-  if(name === "home"){
-    homeBtn.style.display = "none";
-  } else {
-    homeBtn.style.display = "flex";
-  }
-}
-
-el("navBack").onclick = function(){
-  const cfg = NAV_MAP[_currentScreen];
-  if(!cfg || !cfg.padre) return;
-  const padre = cfg.padre;
-  /* Lógica de regreso según pantalla */
-  if(padre === "conta") showContaScreen();
-  else if(padre === "home") showScreen("home");
-  else showScreen(padre);
-};
-
-el("navHome").onclick = function(){
-  /* Ir siempre al home sin cerrar sesión */
-  showScreen("home");
-};
-
-el("navLogout").onclick = logout;
-
-/* Inicializar la barra al cargar */
-updateNavBar("login");
-
-/* ============================================================
-   FIN NAVEGACIÓN GLOBAL
+   FIN MÓDULO INDICADORES
    ============================================================ */
 
 initApp();
 </script>
+
 <!-- ============ BARRA DE NAVEGACIÓN GLOBAL ============ -->
 <div class="nav-bar" id="globalNavBar">
   <button class="nav-bar-btn" id="navBack">
@@ -3425,5 +3355,66 @@ initApp();
   </button>
 </div>
 
+<script>
+/* ============================================================
+   NAVEGACIÓN GLOBAL — se ejecuta DESPUÉS del DOM
+   ============================================================ */
+(function(){
+  const PADRE = {
+    "app"           : "home",
+    "musico"        : "home",
+    "conta"         : "home",
+    "conta-validar" : "conta",
+    "conta-bancos"  : "conta",
+    "validar"       : "home",
+    "indicadores"   : "home",
+  };
+
+  let _cur = "login";
+
+  /* Interceptar showScreen */
+  const _orig = showScreen;
+  window.showScreen = function(name){
+    _orig(name);
+    _cur = name;
+    actualizar(name);
+  };
+
+  function actualizar(name){
+    const bar = document.getElementById("globalNavBar");
+    if(!bar) return;
+    if(!name || name === "login"){
+      bar.classList.remove("visible"); return;
+    }
+    bar.classList.add("visible");
+    const back = document.getElementById("navBack");
+    const home = document.getElementById("navHome");
+    /* Regresar: visible si tiene pantalla padre */
+    back.style.opacity = PADRE[name] ? "1" : "0.25";
+    back.style.pointerEvents = PADRE[name] ? "auto" : "none";
+    /* Inicio: oculto si ya estamos en home */
+    home.style.opacity = name === "home" ? "0.25" : "1";
+    home.style.pointerEvents = name === "home" ? "none" : "auto";
+  }
+
+  document.getElementById("navBack").onclick = function(){
+    const padre = PADRE[_cur];
+    if(!padre) return;
+    if(padre === "conta") showContaScreen();
+    else showScreen(padre);
+  };
+
+  document.getElementById("navHome").onclick = function(){
+    showScreen("home");
+  };
+
+  document.getElementById("navLogout").onclick = function(){
+    logout();
+  };
+
+  /* Estado inicial */
+  actualizar("login");
+})();
+</script>
 </body>
 </html>
