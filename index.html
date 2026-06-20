@@ -1247,7 +1247,8 @@ function mergeById(listA, listB){
 
 /* ── cargar músicos (la nube tiene prioridad absoluta) ── */
 let cloudState='checking'; // 'checking' | 'ok' | 'fail' | 'nodb'
-async function loadM(){
+async function loadM(intento){
+  intento = intento || 1;
   const localRaw = lsGetM();
   const localArr = (localRaw && localRaw.length) ? withFormatos(localRaw) : null;
 
@@ -1255,7 +1256,7 @@ async function loadM(){
     try{
       const snap = await Promise.race([
         window.db.collection(COL_M).get(),
-        new Promise((_,r)=>setTimeout(()=>r('timeout'),15000))
+        new Promise((_,r)=>setTimeout(()=>r('timeout'), intento===1?8000:15000))
       ]);
       cloudState='ok';
       const cloudArr = (snap && !snap.empty) ? withFormatos(snap.docs.map(d=>d.data())) : [];
@@ -1267,10 +1268,15 @@ async function loadM(){
         return source;
       }
 
-      /* nube tiene datos → la nube siempre gana */
       localStorage.setItem(LS_M, JSON.stringify(cloudArr));
       return cloudArr;
     }catch(e){
+      /* reintentar hasta 3 veces */
+      if(intento < 3){
+        cloudState='checking';
+        await new Promise(r=>setTimeout(r, 2000));
+        return loadM(intento+1);
+      }
       cloudState='fail';
       if(localArr) return localArr;
     }
@@ -1290,13 +1296,14 @@ function mergeWeeks(cloud, local){
   });
   return out;
 }
-async function loadW(){
+async function loadW(intento){
+  intento = intento || 1;
   const local = lsGetW();
   if(window.db){
     try{
       const snap = await Promise.race([
         window.db.collection(COL_W).get(),
-        new Promise((_,r)=>setTimeout(()=>r('timeout'),15000))
+        new Promise((_,r)=>setTimeout(()=>r('timeout'), intento===1?8000:15000))
       ]);
       const cloud={}; if(snap&&snap.docs) snap.docs.forEach(d=>{ cloud[d.id]=d.data(); });
       if(Object.keys(cloud).length > 0){
@@ -1308,7 +1315,13 @@ async function loadW(){
         return local;
       }
       return local;
-    }catch(e){}
+    }catch(e){
+      /* si falló y es el primer intento, esperar 2s y reintentar */
+      if(intento < 3){
+        await new Promise(r=>setTimeout(r, 2000));
+        return loadW(intento+1);
+      }
+    }
   }
   return local;
 }
@@ -3248,9 +3261,12 @@ function updateDbIndicator(state){
 
 async function initApp(){
   const loader = document.getElementById("appLoader");
+  const loaderMsg = loader ? loader.querySelector("div:last-child") : null;
   if(loader) loader.style.display="flex";
+  if(loaderMsg) loaderMsg.textContent = "Conectando con la nube…";
   try{
     data = await loadM();
+    if(loaderMsg) loaderMsg.textContent = "Cargando semanas…";
     weeks = await loadW();
   }catch(e){
     cloudState="fail";
