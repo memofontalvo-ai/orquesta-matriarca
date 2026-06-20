@@ -1307,23 +1307,25 @@ async function loadW(intento){
       ]);
       const cloud={}; if(snap&&snap.docs) snap.docs.forEach(d=>{ cloud[d.id]=d.data(); });
       if(Object.keys(cloud).length > 0){
+        /* nube tiene datos → limpiar localStorage y usar solo la nube */
+        localStorage.removeItem(LS_W);
         localStorage.setItem(LS_W, JSON.stringify(cloud));
         return cloud;
       }
+      /* nube vacía → subir localStorage si hay datos */
       if(local && Object.keys(local).length > 0){
         try{ const b=window.db.batch(); Object.entries(local).forEach(([k,v])=>b.set(window.db.collection(COL_W).doc(k),v)); b.commit().catch(()=>{}); }catch(e){}
         return local;
       }
-      return local;
+      return local||{};
     }catch(e){
-      /* si falló y es el primer intento, esperar 2s y reintentar */
       if(intento < 3){
         await new Promise(r=>setTimeout(r, 2000));
         return loadW(intento+1);
       }
     }
   }
-  return local;
+  return local||{};
 }
 
 /* guardar semana */
