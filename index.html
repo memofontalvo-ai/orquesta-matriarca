@@ -1100,7 +1100,9 @@
   </div>
 
   <div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
-<!-- Firebase desactivado - modo localStorage -->
+<!-- Firebase ACTIVO -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
   /* ===== Conexión a Firebase (base de datos del proyecto CONTROL MUSICOS) ===== */
   const firebaseConfig = {
@@ -1111,7 +1113,12 @@
     messagingSenderId: "259864283569",
     appId: "1:259864283569:web:3c82edbceefa320d839590"
   };
-  window.db = null; // modo localStorage
+  try {
+    firebase.initializeApp(firebaseConfig);
+    window.db = firebase.firestore();
+  } catch(e) {
+    window.db = null;
+  }
 </script>
 <script>
 const FORMATOS=["Orquesta pequeña","Orquesta grande","Quinteto","Quinteto Ordinario","Vallenato","Música popular"];
