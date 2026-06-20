@@ -14,11 +14,11 @@
     --radius:14px;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
+  html,body{margin:0;padding:0;overflow-x:hidden}
 
   /* ---- Pantallas ---- */
   html,body{height:100%;overflow:hidden}
-  .screen{display:none;position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--paper)}
+  .screen{display:none;position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;background:var(--paper)}
   .screen.active{display:block}
   #screen-login{background:#0c0b08}
   #screen-login.active{display:flex;flex-direction:column;justify-content:flex-end}
@@ -427,7 +427,7 @@
   .liq-pend{margin:0 0 12px;padding:11px 14px;border-radius:11px;background:rgba(194,131,42,.12);border:1px solid rgba(194,131,42,.4);color:#8a5a14;font-size:12.5px;font-weight:600;line-height:1.4}
 
   /* modal */
-  .overlay{position:fixed;inset:0;background:rgba(20,21,26,.5);backdrop-filter:blur(2px);display:none;align-items:flex-start;justify-content:center;padding:24px 16px;z-index:50;overflow:auto}
+  .overlay{position:fixed;inset:0;background:rgba(20,21,26,.5);backdrop-filter:blur(2px);display:none;align-items:flex-start;justify-content:center;padding:24px 16px;z-index:50;overflow:auto;box-sizing:border-box}
   .overlay.open{display:flex}
   .modal{background:var(--card);width:100%;max-width:560px;border-radius:18px;box-shadow:0 24px 60px rgba(20,21,26,.28);margin:auto;animation:pop .22s ease both}
   @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
@@ -575,6 +575,15 @@
     pointer-events:none;
   }
   #dbIndicator:hover .db-tooltip{display:block}
+
+  /* ── Fix botones modal en móvil ── */
+  .modal{width:100%;max-width:560px;box-sizing:border-box}
+  .modal-actions{display:flex;flex-wrap:wrap;gap:8px;padding:14px;border-top:1px solid var(--line)}
+  .modal-actions .btn{flex:1;min-width:120px;justify-content:center}
+  @media(max-width:480px){
+    .modal-actions .btn{min-width:calc(50% - 4px)}
+    .overlay{padding:12px 8px}
+  }
 </style>
 </head>
 <body data-view="musicos">
@@ -601,7 +610,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
-      <div class="app-version">v3.18 · Orquesta Matriarca</div>
+      <div class="app-version">v3.20 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -1056,7 +1065,6 @@
         <button class="btn btn-ghost" id="btnDeleteInModal" style="display:none;color:var(--danger)">Eliminar</button>
         <div style="margin-left:auto;display:flex;gap:10px">
           <button class="btn btn-ghost" id="btnCancel">Cancelar</button>
-          <button class="btn btn-approve" id="btnApprove" style="display:none">Aprobar contratación</button>
           <button class="btn btn-primary" id="btnSave">Guardar músico</button>
         </div>
       </div>
@@ -1439,9 +1447,9 @@ function renderM(){
   el("stRate").textContent=data.filter(m=>m.formatos&&m.formatos.length&&m.formatos.every(f=>m.tarifas&&m.tarifas[f]!=null)).length;
   el("stBanks").textContent=new Set(data.map(m=>(m.banco||"").toLowerCase()).filter(Boolean)).size;
 }
-function openNew(){proposalMode=false;editId=null;el("modalTitle").textContent="Nuevo músico";el("btnDeleteInModal").style.display="none";el("btnApprove").style.display="none";el("proposeBanner").style.display="none";el("fmtLabel").innerHTML='Formatos y tarifas <span class="hint">(chulea el grupo y escribe su valor)</span>';el("btnSave").textContent="Guardar músico";setForm({});el("overlay").classList.add("open");el("fNombre").focus();}
-function openPropose(){proposalMode=true;editId=null;el("modalTitle").textContent="Proponer contratación";el("btnDeleteInModal").style.display="none";el("btnApprove").style.display="none";el("proposeBanner").style.display="block";el("fmtLabel").innerHTML='Grupos en los que tocaría <span class="hint">(sin precio)</span>';el("btnSave").textContent="Enviar propuesta";setForm({});el("overlay").classList.add("open");el("fNombre").focus();}
-function openEdit(id){const m=data.find(x=>x.id===id);if(!m)return;proposalMode=false;editId=id;const prop=(m.estado==="propuesto");el("modalTitle").textContent=prop?"Revisar propuesta de contratación":"Editar músico";el("btnDeleteInModal").style.display="inline-flex";el("proposeBanner").style.display=prop?"block":"none";if(prop)el("proposeBanner").innerHTML='<b>Propuesta del director.</b> Asígnale la tarifa de cada grupo y toca <b>Aprobar contratación</b> para dejarlo fijo en la lista.';el("fmtLabel").innerHTML='Formatos y tarifas <span class="hint">(chulea el grupo y escribe su valor)</span>';el("btnApprove").style.display=prop?"inline-flex":"none";el("btnSave").textContent="Guardar músico";setForm(m);el("overlay").classList.add("open");}
+function openNew(){proposalMode=false;editId=null;el("modalTitle").textContent="Nuevo músico";el("btnDeleteInModal").style.display="none";el("proposeBanner").style.display="none";el("fmtLabel").innerHTML='Formatos y tarifas <span class="hint">(chulea el grupo y escribe su valor)</span>';el("btnSave").textContent="Guardar músico";setForm({});el("overlay").classList.add("open");el("fNombre").focus();}
+function openPropose(){proposalMode=true;editId=null;el("modalTitle").textContent="Proponer contratación";el("btnDeleteInModal").style.display="none";el("proposeBanner").style.display="block";el("fmtLabel").innerHTML='Grupos en los que tocaría <span class="hint">(sin precio)</span>';el("btnSave").textContent="Enviar propuesta";setForm({});el("overlay").classList.add("open");el("fNombre").focus();}
+function openEdit(id){const m=data.find(x=>x.id===id);if(!m)return;proposalMode=false;editId=id;const prop=(m.estado==="propuesto");el("modalTitle").textContent=prop?"Revisar propuesta de contratación":"Editar músico";el("btnDeleteInModal").style.display="inline-flex";el("proposeBanner").style.display=prop?"block":"none";if(prop)el("proposeBanner").innerHTML='<b>Propuesta del director.</b> Asígnale la tarifa de cada grupo y toca <b>Aprobar contratación</b> para dejarlo fijo en la lista.';el("fmtLabel").innerHTML='Formatos y tarifas <span class="hint">(chulea el grupo y escribe su valor)</span>';el("btnSave").textContent=prop?"Aprobar y guardar":"Guardar músico";setForm(m);el("overlay").classList.add("open");}
 let formSel=new Set();
 let formTarifas={};
 let proposalMode=false;
@@ -2141,8 +2149,8 @@ el("btnToday").onclick=()=>{curMonday=mondayOf(new Date());replaceOpenFor=null;r
 el("weekPick").onchange=e=>{if(e.target.value){const[y,mo,d]=e.target.value.split('-').map(Number);curMonday=mondayOf(new Date(y,mo-1,d));replaceOpenFor=null;renderWeek();}};
 
 /* listeners */
-el("btnNew").onclick=openNew;el("btnClose").onclick=closeModal;el("btnCancel").onclick=closeModal;el("btnSave").onclick=()=>save();
-el("btnApprove").onclick=approveHire;
+el("btnNew").onclick=openNew;el("btnClose").onclick=closeModal;el("btnCancel").onclick=closeModal;el("btnSave").onclick=()=>{ const m=data.find(x=>x.id===editId); save(m&&m.estado==="propuesto"); };
+// btnApprove eliminado - ahora Guardar hace todo
 el("goPropose").onclick=openPropose;
 el("musPrev").onclick=()=>{curMonday=addDays(curMonday,-7);renderMusicoReport();};
 el("musNext").onclick=()=>{curMonday=addDays(curMonday,7);renderMusicoReport();};
