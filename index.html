@@ -601,7 +601,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
-      <div class="app-version">v3.15 · Orquesta Matriarca</div>
+      <div class="app-version">v3.17 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -1230,7 +1230,7 @@ function fsDelete(id){
 }
 function fsSyncWeek(k,w){
   if(!window.db) return;
-  try{ window.db.collection(COL_W).doc(k).set(w).catch(()=>{}); }catch(e){}
+  try{ window.db.collection(COL_W).doc(k).set(w, {merge:true}).catch(()=>{}); }catch(e){}
 }
 
 /* ── combinar por id, conservando SIEMPRE lo más reciente ── */
