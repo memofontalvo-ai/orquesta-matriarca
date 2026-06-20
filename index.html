@@ -601,7 +601,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
-      <div class="app-version">v3.17 · Orquesta Matriarca</div>
+      <div class="app-version">v3.18 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -1220,17 +1220,24 @@ function lsGetW(){ try{ const r=localStorage.getItem(LS_W); return r?JSON.parse(
 function lsSaveW(){ try{ localStorage.setItem(LS_W,JSON.stringify(weeks)); }catch(e){} }
 
 /* ── sincronizar UN músico a Firestore en segundo plano ── */
-function fsSync(m){
+function fsSync(m,intento){
   if(!window.db) return;
-  try{ window.db.collection(COL_M).doc(String(m.id)).set(m).catch(()=>{}); }catch(e){}
+  intento = intento||1;
+  window.db.collection(COL_M).doc(String(m.id)).set(m).catch(e=>{
+    if(intento<3) setTimeout(()=>fsSync(m,intento+1), 2000);
+  });
 }
 function fsDelete(id){
   if(!window.db) return;
   try{ window.db.collection(COL_M).doc(String(id)).delete().catch(()=>{}); }catch(e){}
 }
-function fsSyncWeek(k,w){
+function fsSyncWeek(k,w,intento){
   if(!window.db) return;
-  try{ window.db.collection(COL_W).doc(k).set(w, {merge:true}).catch(()=>{}); }catch(e){}
+  intento = intento||1;
+  window.db.collection(COL_W).doc(k).set(w, {merge:true}).catch(e=>{
+    /* si falla, reintentar hasta 3 veces con 2s de espera */
+    if(intento<3) setTimeout(()=>fsSyncWeek(k,w,intento+1), 2000);
+  });
 }
 
 /* ── combinar por id, conservando SIEMPRE lo más reciente ── */
