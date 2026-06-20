@@ -1104,7 +1104,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
-  /* ===== Conexión a Firebase (base de datos del proyecto CONTROL MUSICOS) ===== */
   const firebaseConfig = {
     apiKey: "AIzaSyANXMHWYkvITcvDsj3q7AexlNAEvKbggWw",
     authDomain: "control-musicos.firebaseapp.com",
@@ -1113,12 +1112,7 @@
     messagingSenderId: "259864283569",
     appId: "1:259864283569:web:3c82edbceefa320d839590"
   };
-  try {
-    firebase.initializeApp(firebaseConfig);
-    window.db = firebase.firestore();
-  } catch(e) {
-    window.db = null;
-  }
+  try { firebase.initializeApp(firebaseConfig); window.db = firebase.firestore(); } catch(e) { window.db = null; }
 </script>
 <script>
 const FORMATOS=["Orquesta pequeña","Orquesta grande","Quinteto","Quinteto Ordinario","Vallenato","Música popular"];
@@ -1211,12 +1205,11 @@ async function loadM(){
     try{
       const snap = await Promise.race([
         window.db.collection(COL_M).get(),
-        new Promise((_,r)=>setTimeout(()=>r('timeout'),12000))
+        new Promise((_,r)=>setTimeout(()=>r('timeout'),15000))
       ]);
       cloudState='ok';
       const cloudArr = (snap && !snap.empty) ? withFormatos(snap.docs.map(d=>d.data())) : [];
 
-      /* primera vez: no hay nada en nube → sembrar o subir localStorage */
       if(!cloudArr.length){
         const source = localArr || withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
         try{ const b=window.db.batch(); source.forEach(m=>b.set(window.db.collection(COL_M).doc(String(m.id)),m)); b.commit().catch(()=>{}); }catch(e){}
@@ -1224,7 +1217,7 @@ async function loadM(){
         return source;
       }
 
-      /* nube tiene datos → la nube SIEMPRE gana, guardar en localStorage como caché */
+      /* nube tiene datos → la nube siempre gana */
       localStorage.setItem(LS_M, JSON.stringify(cloudArr));
       return cloudArr;
     }catch(e){
@@ -1253,15 +1246,13 @@ async function loadW(){
     try{
       const snap = await Promise.race([
         window.db.collection(COL_W).get(),
-        new Promise((_,r)=>setTimeout(()=>r('timeout'),12000))
+        new Promise((_,r)=>setTimeout(()=>r('timeout'),15000))
       ]);
       const cloud={}; if(snap&&snap.docs) snap.docs.forEach(d=>{ cloud[d.id]=d.data(); });
-      /* si hay datos en la nube, la nube gana siempre */
       if(Object.keys(cloud).length > 0){
         localStorage.setItem(LS_W, JSON.stringify(cloud));
         return cloud;
       }
-      /* nube vacía → subir localStorage si hay datos */
       if(local && Object.keys(local).length > 0){
         try{ const b=window.db.batch(); Object.entries(local).forEach(([k,v])=>b.set(window.db.collection(COL_W).doc(k),v)); b.commit().catch(()=>{}); }catch(e){}
         return local;
@@ -3187,6 +3178,8 @@ if(el("goBancos")) el("goBancos").onclick=showContaBancos;
 /* ============ FIN MÓDULO PAGO POR BANCOS ============ */
 
 async function initApp(){
+  const loader = document.getElementById("appLoader");
+  if(loader) loader.style.display="flex";
   try{
     data = await loadM();
     weeks = await loadW();
@@ -3195,6 +3188,7 @@ async function initApp(){
     toast("Sin conexión a la base de datos");
     if(!data.length) data = withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
   }
+  if(loader) loader.style.display="none";
   renderM();
   renderCloudBar();
 }
@@ -3628,6 +3622,11 @@ el("goProgramacion").onclick=showProgramacion;
 initApp();
 </script>
 
-<!-- ============ BARRA DE NAVEGACIÓN GLOBAL ============ -->
+<div id="appLoader" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(26,27,30,0.96);flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <div style="width:52px;height:52px;border:4px solid #E0A23B;border-top-color:transparent;border-radius:50%;animation:loaderSpin 0.8s linear infinite"></div>
+  <div style="color:#E0A23B;font-weight:700;font-size:15px;letter-spacing:0.05em">Conectando con la nube…</div>
+</div>
+<style>@keyframes loaderSpin{to{transform:rotate(360deg)}}</style>
+
 </body>
 </html>
