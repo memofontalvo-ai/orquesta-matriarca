@@ -791,6 +791,7 @@
       </div>
       <button id="contaToday" class="mus-today">Esta semana</button>
       <div class="conta-actions" id="contaActions" style="display:none">
+        <button onclick="marcarSemanaCompletaPagada()" style="background:#C0473B;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;letter-spacing:.03em;margin-bottom:8px;width:100%">⚡ MARCAR TODO COMO PAGADO + WA + BLOQUEAR</button>
         <button class="btn btn-primary" id="contaWABloque" style="background:#25D366;color:#fff" onclick="enviarWABloque()">📱 WhatsApp a pagados</button>
         <button class="btn btn-primary" id="contaReporte" style="background:var(--ink);color:#fff" onclick="generarReporteImagen()">📄 Guardar reporte</button>
       </div>
@@ -3302,6 +3303,30 @@ function renderBloqueoBar(){
   } else {
     bar.style.display="none";
   }
+}
+
+
+/* ── BOTÓN ESPECIAL ADMIN: Marcar semana completa como pagada + WA + bloqueada ── */
+function marcarSemanaCompletaPagada(){
+  if(!confirm("¿Marcar TODA la semana como pagada, WhatsApp enviado y bloqueada?\n\nEsto simula que ya se hizo todo el proceso.")) return;
+  const lista = computeContaPagos();
+  if(!lista.length){ toast("No hay músicos en esta semana"); return; }
+  const k = keyOf(contaWeekMonday);
+  weeks[k] = weeks[k] || {days:Array(7).fill(null).map(()=>({pres:[],locked:false})),extra:{}};
+  weeks[k].extra = weeks[k].extra || {};
+  const now = Date.now();
+  lista.forEach(item => {
+    weeks[k].extra[item.id] = weeks[k].extra[item.id] || {bono:0,desc:0};
+    weeks[k].extra[item.id].contaPagado = true;
+    weeks[k].extra[item.id].contaPagadoAt = now;
+    weeks[k].extra[item.id].waSent = true;
+    weeks[k].extra[item.id].waSentAt = now;
+  });
+  weeks[k].pagosLocked = true;
+  weeks[k].pagosLockedAt = now;
+  persistWConta();
+  renderContabilidad();
+  toast("✅ Semana marcada como pagada, WhatsApp enviado y bloqueada");
 }
 
 function bloquearSemana(){
