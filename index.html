@@ -526,6 +526,55 @@
   .vp-resumen-item span{font-size:.72rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.05em}
   .vp-resumen-item b{font-size:1.1rem;font-weight:800}
 
+
+  /* ── Indicador de conexión global ── */
+  #dbIndicator{
+    position:fixed;
+    bottom:18px;
+    right:18px;
+    z-index:9998;
+    width:14px;
+    height:14px;
+    border-radius:50%;
+    background:#888;
+    box-shadow:0 0 0 0 rgba(136,136,136,0.5);
+    transition:background 0.4s;
+  }
+  #dbIndicator.conectado{
+    background:#3E8E6E;
+    box-shadow:0 0 0 0 rgba(62,142,110,0.6);
+    animation:pulsoVerde 1.8s infinite;
+  }
+  #dbIndicator.desconectado{
+    background:#C0473B;
+    box-shadow:0 0 0 0 rgba(192,71,59,0.6);
+    animation:pulsoRojo 1.2s infinite;
+  }
+  @keyframes pulsoVerde{
+    0%{box-shadow:0 0 0 0 rgba(62,142,110,0.6)}
+    70%{box-shadow:0 0 0 8px rgba(62,142,110,0)}
+    100%{box-shadow:0 0 0 0 rgba(62,142,110,0)}
+  }
+  @keyframes pulsoRojo{
+    0%{box-shadow:0 0 0 0 rgba(192,71,59,0.6)}
+    70%{box-shadow:0 0 0 8px rgba(192,71,59,0)}
+    100%{box-shadow:0 0 0 0 rgba(192,71,59,0)}
+  }
+  #dbIndicator .db-tooltip{
+    display:none;
+    position:absolute;
+    bottom:20px;
+    right:0;
+    background:#1A1B1E;
+    color:#fff;
+    font-size:12px;
+    font-weight:600;
+    white-space:nowrap;
+    padding:5px 10px;
+    border-radius:8px;
+    pointer-events:none;
+  }
+  #dbIndicator:hover .db-tooltip{display:block}
 </style>
 </head>
 <body data-view="musicos">
@@ -1445,6 +1494,7 @@ function renderCloudBar(){
   else if(cloudState==="fail") msg.textContent="No se pudo conectar con la nube. Tus datos están seguros en este dispositivo. Toca Verificar nube para reintentar.";
   else if(cloudState==="ok") msg.textContent="Conectado a la nube. Toca Verificar nube para confirmar que todo quedó respaldado.";
   else msg.textContent="Comprobando conexión con la nube…";
+  updateDbIndicator(cloudState);
 }
 async function verifyCloud(){
   const btn=el("btnVerify"), msg=el("cloudMsg");
@@ -3177,6 +3227,24 @@ if(el("goBancos")) el("goBancos").onclick=showContaBancos;
 
 /* ============ FIN MÓDULO PAGO POR BANCOS ============ */
 
+
+/* ── Indicador global de conexión ── */
+function updateDbIndicator(state){
+  const dot = document.getElementById("dbIndicator");
+  const tip = dot ? dot.querySelector(".db-tooltip") : null;
+  if(!dot) return;
+  dot.className = "";
+  if(state === "ok"){
+    dot.classList.add("conectado");
+    if(tip) tip.textContent = "✓ Conectado a la nube";
+  } else if(state === "fail"){
+    dot.classList.add("desconectado");
+    if(tip) tip.textContent = "✗ Sin conexión a la nube";
+  } else {
+    if(tip) tip.textContent = "Verificando conexión…";
+  }
+}
+
 async function initApp(){
   const loader = document.getElementById("appLoader");
   if(loader) loader.style.display="flex";
@@ -3189,6 +3257,7 @@ async function initApp(){
     if(!data.length) data = withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
   }
   if(loader) loader.style.display="none";
+  updateDbIndicator(cloudState);
   renderM();
   renderCloudBar();
 }
@@ -3622,6 +3691,7 @@ el("goProgramacion").onclick=showProgramacion;
 initApp();
 </script>
 
+<div id="dbIndicator" title="Estado de conexión"><span class="db-tooltip">Verificando conexión…</span></div>
 <div id="appLoader" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(26,27,30,0.96);flex-direction:column;align-items:center;justify-content:center;gap:16px">
   <div style="width:52px;height:52px;border:4px solid #E0A23B;border-top-color:transparent;border-radius:50%;animation:loaderSpin 0.8s linear infinite"></div>
   <div style="color:#E0A23B;font-weight:700;font-size:15px;letter-spacing:0.05em">Conectando con la nube…</div>
