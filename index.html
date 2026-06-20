@@ -1201,7 +1201,7 @@ function mergeById(listA, listB){
   return [...map.values()];
 }
 
-/* ── cargar músicos (combina nube + dispositivo, nunca pisa lo bueno) ── */
+/* ── cargar músicos (la nube tiene prioridad absoluta) ── */
 let cloudState='checking'; // 'checking' | 'ok' | 'fail' | 'nodb'
 async function loadM(){
   const localRaw = lsGetM();
@@ -1216,19 +1216,17 @@ async function loadM(){
       cloudState='ok';
       const cloudArr = (snap && !snap.empty) ? withFormatos(snap.docs.map(d=>d.data())) : [];
 
-      /* primera vez de verdad: no hay nada ni en nube ni en dispositivo → sembrar */
-      if(!cloudArr.length && !localArr){
-        const seeded = withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
-        try{ const b=window.db.batch(); seeded.forEach(m=>b.set(window.db.collection(COL_M).doc(String(m.id)),m)); b.commit().catch(()=>{}); }catch(e){}
-        localStorage.setItem(LS_M, JSON.stringify(seeded));
-        return seeded;
+      /* primera vez: no hay nada en nube → sembrar o subir localStorage */
+      if(!cloudArr.length){
+        const source = localArr || withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
+        try{ const b=window.db.batch(); source.forEach(m=>b.set(window.db.collection(COL_M).doc(String(m.id)),m)); b.commit().catch(()=>{}); }catch(e){}
+        localStorage.setItem(LS_M, JSON.stringify(source));
+        return source;
       }
 
-      /* combinar y curar la nube con el resultado combinado */
-      const merged = mergeById(cloudArr, localArr||[]);
-      localStorage.setItem(LS_M, JSON.stringify(merged));
-      try{ const b=window.db.batch(); merged.forEach(m=>b.set(window.db.collection(COL_M).doc(String(m.id)),m)); b.commit().catch(()=>{}); }catch(e){}
-      return merged;
+      /* nube tiene datos → la nube SIEMPRE gana, guardar en localStorage como caché */
+      localStorage.setItem(LS_M, JSON.stringify(cloudArr));
+      return cloudArr;
     }catch(e){
       cloudState='fail';
       if(localArr) return localArr;
@@ -1258,9 +1256,17 @@ async function loadW(){
         new Promise((_,r)=>setTimeout(()=>r('timeout'),12000))
       ]);
       const cloud={}; if(snap&&snap.docs) snap.docs.forEach(d=>{ cloud[d.id]=d.data(); });
-      const merged=mergeWeeks(cloud, local);
-      localStorage.setItem(LS_W, JSON.stringify(merged));
-      return merged;
+      /* si hay datos en la nube, la nube gana siempre */
+      if(Object.keys(cloud).length > 0){
+        localStorage.setItem(LS_W, JSON.stringify(cloud));
+        return cloud;
+      }
+      /* nube vacía → subir localStorage si hay datos */
+      if(local && Object.keys(local).length > 0){
+        try{ const b=window.db.batch(); Object.entries(local).forEach(([k,v])=>b.set(window.db.collection(COL_W).doc(k),v)); b.commit().catch(()=>{}); }catch(e){}
+        return local;
+      }
+      return local;
     }catch(e){}
   }
   return local;
