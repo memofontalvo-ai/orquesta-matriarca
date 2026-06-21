@@ -610,7 +610,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
-      <div class="app-version">v3.20 · Orquesta Matriarca</div>
+      <div class="app-version">v3.21 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -1197,8 +1197,8 @@ const SEED=[
  {alias:"JOSE ARAGON",nombre:"José Aragón",banco:"Bancolombia",cuenta:"91209419446",ordinaria:120000,finde:120000,formatos:[]},
  {alias:"GABRIEL",nombre:"Gabriel",banco:"Bancolombia",cuenta:"91265113767",ordinaria:135000,finde:170000,formatos:[]},
 ];
-const COL_M="musicos", COL_W="semanas";
-const LS_M="matriarca_musicos_v1", LS_W="matriarca_semanas_v1";
+const COL_M="musicos", COL_W="semanas", COL_CFG="config";
+const LS_M="matriarca_musicos_v1", LS_W="matriarca_semanas_v1", LS_CFG="matriarca_config_v1";
 let data = [];
 let weeks = {};
 let editId=null;
@@ -1283,8 +1283,20 @@ async function loadM(intento){
         return source;
       }
 
-      localStorage.setItem(LS_M, JSON.stringify(cloudArr));
-      return cloudArr;
+      /* Merge: si localStorage tiene cambios más recientes (updatedAt mayor), los preserva */
+      const merged = localArr ? mergeById(cloudArr, localArr) : cloudArr;
+      /* Subir a Firebase los registros locales que sean más nuevos que la nube */
+      if(localArr){
+        const toSync = merged.filter(m=>{
+          const inCloud = cloudArr.find(c=>c.id===m.id);
+          return !inCloud || (m.updatedAt||0) > (inCloud.updatedAt||0);
+        });
+        if(toSync.length){
+          try{ const b=window.db.batch(); toSync.forEach(m=>b.set(window.db.collection(COL_M).doc(String(m.id)),m)); b.commit().catch(()=>{}); }catch(e){}
+        }
+      }
+      localStorage.setItem(LS_M, JSON.stringify(merged));
+      return merged;
     }catch(e){
       /* reintentar hasta 3 veces */
       if(intento < 3){
@@ -1322,10 +1334,18 @@ async function loadW(intento){
       ]);
       const cloud={}; if(snap&&snap.docs) snap.docs.forEach(d=>{ cloud[d.id]=d.data(); });
       if(Object.keys(cloud).length > 0){
-        /* nube tiene datos → limpiar localStorage y usar solo la nube */
-        localStorage.removeItem(LS_W);
-        localStorage.setItem(LS_W, JSON.stringify(cloud));
-        return cloud;
+        /* Merge: conserva la versión más reciente de cada semana (por _ts) */
+        const merged = mergeWeeks(cloud, local);
+        /* Subir a la nube las semanas locales más recientes que la nube */
+        const toSync = Object.keys(merged).filter(k=>{
+          const c=cloud[k], mrg=merged[k];
+          return !c || ((mrg._ts||0) > (c._ts||0));
+        });
+        if(toSync.length){
+          try{ const b=window.db.batch(); toSync.forEach(k=>b.set(window.db.collection(COL_W).doc(k),merged[k])); b.commit().catch(()=>{}); }catch(e){}
+        }
+        localStorage.setItem(LS_W, JSON.stringify(merged));
+        return merged;
       }
       /* nube vacía → subir localStorage si hay datos */
       if(local && Object.keys(local).length > 0){
@@ -1371,7 +1391,13 @@ function persistM(){
   }catch(e){}
 }
 
-function nextId(){ return data.reduce((m,x)=>Math.max(m,x.id),0)+1; }
+function nextId(){
+  /* ID secuencial pero a prueba de colisiones: si el siguiente ya existe, avanza al libre. */
+  const maxId = data.reduce((m,x)=>Math.max(m, Number(x.id)||0), 0);
+  let id = maxId + 1;
+  while(data.some(x=>Number(x.id)===id)) id++;
+  return id;
+}
 
 /* helpers */
 const el=id=>document.getElementById(id);
@@ -1569,7 +1595,7 @@ async function verifyCloud(){
     if(btn){btn.disabled=false;btn.textContent="Verificar nube";}
   }
 }
-function importData(file){const r=new FileReader();r.onload=()=>{try{const arr=JSON.parse(r.result);if(!Array.isArray(arr))throw 0;data=arr.map((m,i)=>({id:m.id??i+1,...m}));persistM();renderM();toast("Respaldo importado");}catch(e){alert("Archivo no válido.");}};r.readAsText(file);}
+function importData(file){const r=new FileReader();r.onload=()=>{try{const arr=JSON.parse(r.result);if(!Array.isArray(arr))throw 0;const now=Date.now();data=arr.map((m,i)=>({id:m.id??i+1,...m,updatedAt:now}));persistM();renderM();toast("Respaldo importado");}catch(e){alert("Archivo no válido.");}};r.readAsText(file);}
 
 /* ============ PLANILLA VIEW ============ */
 function normPres(p,defH){
@@ -2195,6 +2221,49 @@ let USERS=[
   {u:"director",     p:"director",   rol:"director",     nombre:"Director musical"},
   {u:"contabilidad", p:"conta2024",  rol:"contabilidad", nombre:"Contabilidad"},
 ];
+
+/* ── Persistencia de credenciales de contabilidad ──
+   Solo la cuenta de contabilidad es editable; se guarda en la nube + localStorage. */
+function saveContaCreds(){
+  const acc = USERS.find(x=>x.rol==="contabilidad");
+  if(!acc) return;
+  const cfg = { u:acc.u, p:acc.p, updatedAt:Date.now() };
+  try{ localStorage.setItem(LS_CFG, JSON.stringify(cfg)); }catch(e){}
+  if(window.db){
+    try{ window.db.collection(COL_CFG).doc("contaCreds").set(cfg).catch(()=>{}); }catch(e){}
+  }
+}
+async function loadContaCreds(){
+  let localCfg=null;
+  try{ const r=localStorage.getItem(LS_CFG); localCfg=r?JSON.parse(r):null; }catch(e){}
+  let cfg=localCfg;
+  if(window.db){
+    try{
+      const doc=await Promise.race([
+        window.db.collection(COL_CFG).doc("contaCreds").get(),
+        new Promise((_,r)=>setTimeout(()=>r("timeout"),6000))
+      ]);
+      if(doc&&doc.exists){
+        const cloud=doc.data();
+        /* gana el más reciente por updatedAt */
+        if(!localCfg || (cloud.updatedAt||0) >= (localCfg.updatedAt||0)){
+          cfg=cloud;
+          try{ localStorage.setItem(LS_CFG, JSON.stringify(cloud)); }catch(e){}
+        } else {
+          /* localStorage más reciente → subir a la nube */
+          try{ window.db.collection(COL_CFG).doc("contaCreds").set(localCfg).catch(()=>{}); }catch(e){}
+        }
+      } else if(localCfg){
+        /* nube vacía → subir localStorage */
+        try{ window.db.collection(COL_CFG).doc("contaCreds").set(localCfg).catch(()=>{}); }catch(e){}
+      }
+    }catch(e){}
+  }
+  if(cfg && cfg.u){
+    const acc = USERS.find(x=>x.rol==="contabilidad");
+    if(acc){ acc.u=cfg.u; acc.p=cfg.p; }
+  }
+}
 let currentUser=null;
 let activeMusicoId=null;
 let _navCur = "login";
@@ -2347,6 +2416,7 @@ function saveUserCreds(){
     }
     const acc = USERS.find(x=>x.rol==="contabilidad");
     if(acc){ acc.u=u; acc.p=p; }
+    saveContaCreds();
     closeUserEditor();
     toast("✓ Credenciales de contabilidad actualizadas");
     return;
@@ -2365,6 +2435,7 @@ function saveUserCreds(){
   m.rol=userEditRol;
   m.usuario=u;
   m.clave=u?p:""; // si no hay usuario personalizado, no guardamos clave (usa teléfono)
+  m.updatedAt=Date.now();
   fsSync(m); lsSaveM();
   closeUserEditor();
   toast("✓ Perfil de "+(m.nombre||m.alias)+" actualizado");
@@ -2406,6 +2477,7 @@ function doChangePwd(){
   // Fijamos usuario (si no tenía) y guardamos la nueva clave
   if(!hasCustomCred(m)) m.usuario=String(m.cedula||"").trim()||(m.nombre||m.alias||"").trim();
   m.clave=nw;
+  m.updatedAt=Date.now();
   fsSync(m); lsSaveM();
   closeChangePwd();
   toast("✓ Contraseña cambiada. Ya puedes entrar con la nueva.");
@@ -2794,8 +2866,8 @@ function reenviarWA(id){
   const wk=weeks[k]; if(!wk) return;
   wk.extra=wk.extra||{};
   if(wk.extra[id]){
-    delete wk.extra[id].waSent;
-    delete wk.extra[id].waSentAt;
+    wk.extra[id].waSent=false;
+    wk.extra[id].waSentAt=null;
   }
   persistWConta();
   renderContabilidad();
@@ -3238,8 +3310,8 @@ function bancosDeshacer(id){
   const wk=weeks[k]; if(!wk){ toast("No hay datos de esta semana"); return; }
   wk.extra=wk.extra||{};
   if(wk.extra[id]){
-    delete wk.extra[id].contaPagado;
-    delete wk.extra[id].contaPagadoAt;
+    wk.extra[id].contaPagado=false;
+    wk.extra[id].contaPagadoAt=null;
   }
   persistWBancos();
   renderBancos();
@@ -3271,6 +3343,9 @@ function updateDbIndicator(state){
   } else if(state === "fail"){
     dot.classList.add("desconectado");
     if(tip) tip.textContent = "✗ Sin conexión a la nube";
+  } else if(state === "nodb"){
+    dot.classList.add("desconectado");
+    if(tip) tip.textContent = "✗ Nube no disponible — datos solo en este dispositivo";
   } else {
     if(tip) tip.textContent = "Verificando conexión…";
   }
@@ -3285,6 +3360,7 @@ async function initApp(){
     data = await loadM();
     if(loaderMsg) loaderMsg.textContent = "Cargando semanas…";
     weeks = await loadW();
+    await loadContaCreds();
   }catch(e){
     cloudState="fail";
     toast("Sin conexión a la base de datos");
@@ -3383,8 +3459,8 @@ function desbloquearSemana(){
   if(!confirm("¿Desbloquear esta semana?\n\nSolo hazlo si necesitas hacer una corrección.")) return;
   const k = keyOf(contaWeekMonday);
   if(weeks[k]){
-    delete weeks[k].pagosLocked;
-    delete weeks[k].pagosLockedAt;
+    weeks[k].pagosLocked = false;
+    weeks[k].pagosLockedAt = null;
   }
   persistWConta();
   renderContabilidad();
