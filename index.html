@@ -2287,7 +2287,7 @@ function bulkDefaultCreds(){
     let u=base, i=1;
     while(used.has(u)){ i++; u=base+i; }
     used.add(u);
-    m.usuario=u; m.clave="12345";
+    m.usuario=u; m.clave="12345"; m.updatedAt=Date.now();
     n++;
   });
   persistM(); /* guarda todos + nube */
