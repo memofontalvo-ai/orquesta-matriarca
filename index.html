@@ -610,7 +610,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
-      <div class="app-version">v3.21 · Orquesta Matriarca</div>
+      <div class="app-version">v3.23 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -1227,13 +1227,55 @@ function lsSaveM(){ try{ localStorage.setItem(LS_M,JSON.stringify(data)); }catch
 function lsGetW(){ try{ const r=localStorage.getItem(LS_W); return r?JSON.parse(r):{}; }catch(e){ return {}; } }
 function lsSaveW(){ try{ localStorage.setItem(LS_W,JSON.stringify(weeks)); }catch(e){} }
 
+/* ── COLA DE PENDIENTES DE SINCRONIZAR ──
+   Garantiza que ningún dato se pierda: si Firebase falla o cierras la app,
+   el registro queda marcado como pendiente y se reintenta al volver a abrir. */
+const LS_PENDING_M="matriarca_pending_musicos_v1";
+const LS_PENDING_W="matriarca_pending_semanas_v1";
+
+function pendGetM(){ try{ const r=localStorage.getItem(LS_PENDING_M); return r?JSON.parse(r):{}; }catch(e){ return {}; } }
+function pendSaveM(o){ try{ localStorage.setItem(LS_PENDING_M, JSON.stringify(o)); }catch(e){} }
+function pendAddM(id){ const o=pendGetM(); o[String(id)]=Date.now(); pendSaveM(o); }
+function pendClearM(id){ const o=pendGetM(); delete o[String(id)]; pendSaveM(o); }
+
+function pendGetW(){ try{ const r=localStorage.getItem(LS_PENDING_W); return r?JSON.parse(r):{}; }catch(e){ return {}; } }
+function pendSaveW(o){ try{ localStorage.setItem(LS_PENDING_W, JSON.stringify(o)); }catch(e){} }
+function pendAddW(k){ const o=pendGetW(); o[k]=Date.now(); pendSaveW(o); }
+function pendClearW(k){ const o=pendGetW(); delete o[k]; pendSaveW(o); }
+
+/* Reintenta subir TODO lo que quedó pendiente (llamar al abrir la app y al reconectar) */
+function flushPending(){
+  if(!window.db) return;
+  /* Músicos pendientes */
+  const pm=pendGetM();
+  Object.keys(pm).forEach(id=>{
+    const m=data.find(x=>String(x.id)===String(id));
+    if(!m){ pendClearM(id); return; }
+    window.db.collection(COL_M).doc(String(id)).set(m)
+      .then(()=>{ pendClearM(id); try{renderCloudBar();}catch(e){} })
+      .catch(()=>{});
+  });
+  /* Semanas pendientes */
+  const pw=pendGetW();
+  Object.keys(pw).forEach(k=>{
+    if(!weeks[k]){ pendClearW(k); return; }
+    window.db.collection(COL_W).doc(k).set(weeks[k])
+      .then(()=>{ pendClearW(k); try{renderCloudBar();}catch(e){} })
+      .catch(()=>{});
+  });
+}
+
 /* ── sincronizar UN músico a Firestore en segundo plano ── */
 function fsSync(m,intento){
   if(!window.db) return;
   intento = intento||1;
-  window.db.collection(COL_M).doc(String(m.id)).set(m).catch(e=>{
-    if(intento<3) setTimeout(()=>fsSync(m,intento+1), 2000);
-  });
+  if(intento===1) pendAddM(m.id);  /* marcar pendiente hasta que Firebase confirme */
+  window.db.collection(COL_M).doc(String(m.id)).set(m)
+    .then(()=>{ pendClearM(m.id); try{renderCloudBar();}catch(e){} })  /* confirmado en la nube → ya no está pendiente */
+    .catch(e=>{
+      if(intento<3) setTimeout(()=>fsSync(m,intento+1), 2000);
+      /* si se agotan los reintentos, queda en la cola para el próximo arranque */
+    });
 }
 function fsDelete(id){
   if(!window.db) return;
@@ -1242,10 +1284,14 @@ function fsDelete(id){
 function fsSyncWeek(k,w,intento){
   if(!window.db) return;
   intento = intento||1;
-  window.db.collection(COL_W).doc(k).set(w, {merge:true}).catch(e=>{
-    /* si falla, reintentar hasta 3 veces con 2s de espera */
-    if(intento<3) setTimeout(()=>fsSyncWeek(k,w,intento+1), 2000);
-  });
+  if(intento===1) pendAddW(k);  /* marcar semana pendiente hasta confirmar */
+  window.db.collection(COL_W).doc(k).set(w, {merge:true})
+    .then(()=>{ pendClearW(k); try{renderCloudBar();}catch(e){} })  /* confirmada en la nube */
+    .catch(e=>{
+      /* si falla, reintentar hasta 3 veces con 2s de espera */
+      if(intento<3) setTimeout(()=>fsSyncWeek(k,w,intento+1), 2000);
+      /* si se agotan, queda en cola para el próximo arranque */
+    });
 }
 
 /* ── combinar por id, conservando SIEMPRE lo más reciente ── */
@@ -1547,9 +1593,16 @@ function renderCloudBar(){
   const bar=el("cloudBar"); if(!bar)return;
   bar.className="cloud-bar "+cloudState;
   const msg=el("cloudMsg");
-  if(cloudState==="nodb") msg.textContent="Sin nube: los datos se guardan solo en este dispositivo. Descarga un respaldo con Exportar.";
+  /* ¿hay datos pendientes de subir a la nube? */
+  const nPendM=Object.keys(pendGetM()).length;
+  const nPendW=Object.keys(pendGetW()).length;
+  const nPend=nPendM+nPendW;
+  if(nPend>0 && cloudState!=="nodb"){
+    msg.textContent="⏳ Guardando "+nPend+" cambio"+(nPend===1?"":"s")+" en la nube… espera unos segundos antes de cerrar.";
+  }
+  else if(cloudState==="nodb") msg.textContent="Sin nube: los datos se guardan solo en este dispositivo. Descarga un respaldo con Exportar.";
   else if(cloudState==="fail") msg.textContent="No se pudo conectar con la nube. Tus datos están seguros en este dispositivo. Toca Verificar nube para reintentar.";
-  else if(cloudState==="ok") msg.textContent="Conectado a la nube. Toca Verificar nube para confirmar que todo quedó respaldado.";
+  else if(cloudState==="ok") msg.textContent="✓ Todo guardado en la nube. Puedes cerrar con tranquilidad.";
   else msg.textContent="Comprobando conexión con la nube…";
   updateDbIndicator(cloudState);
 }
@@ -3354,22 +3407,64 @@ function updateDbIndicator(state){
 async function initApp(){
   const loader = document.getElementById("appLoader");
   const loaderMsg = loader ? loader.querySelector("div:last-child") : null;
-  if(loader) loader.style.display="flex";
-  if(loaderMsg) loaderMsg.textContent = "Conectando con la nube…";
-  try{
-    data = await loadM();
-    if(loaderMsg) loaderMsg.textContent = "Cargando semanas…";
-    weeks = await loadW();
-    await loadContaCreds();
-  }catch(e){
-    cloudState="fail";
-    toast("Sin conexión a la base de datos");
-    if(!data.length) data = withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
-  }
-  if(loader) loader.style.display="none";
+
+  /* ── PASO 1: Mostrar datos locales AL INSTANTE (sin esperar la nube) ── */
+  const localRaw = lsGetM();
+  const localArr = (localRaw && localRaw.length) ? withFormatos(localRaw) : null;
+  data = localArr || withFormatos(SEED.map((m,i)=>({id:i+1,...m})));
+  weeks = lsGetW() || {};
+  cloudState = window.db ? "checking" : "nodb";
+  if(loader) loader.style.display="none";  /* ocultar loader de inmediato */
   updateDbIndicator(cloudState);
   renderM();
   renderCloudBar();
+
+  /* ── PASO 2: Sincronizar con la nube en SEGUNDO PLANO ── */
+  if(window.db){
+    syncCloudInBackground();
+  }
+}
+
+/* Sincroniza músicos + semanas + credenciales con la nube sin bloquear la interfaz.
+   Cuando llegan datos nuevos, refresca lo que esté visible. */
+async function syncCloudInBackground(){
+  /* Reintentar primero todo lo que quedó pendiente de guardar en sesiones anteriores */
+  flushPending();
+  try{
+    const freshM = await loadM();
+    if(Array.isArray(freshM) && freshM.length){
+      /* Merge con 'data' actual para NO pisar ediciones hechas mientras cargaba */
+      data = mergeById(freshM, data);
+      lsSaveM();
+      if(document.getElementById("list")) renderM();
+    }
+  }catch(e){}
+  try{
+    const freshW = await loadW();
+    if(freshW && typeof freshW==="object"){
+      /* Merge con 'weeks' actual por la misma razón */
+      weeks = mergeWeeks(freshW, weeks);
+      lsSaveW();
+      refreshActiveWeekView();
+    }
+  }catch(e){}
+  try{ await loadContaCreds(); }catch(e){}
+  /* Volver a intentar pendientes que se hayan acumulado durante la sincronización */
+  flushPending();
+  updateDbIndicator(cloudState);
+  renderCloudBar();
+}
+
+/* Re-renderiza la vista visible que dependa de los datos de semanas */
+function refreshActiveWeekView(){
+  try{
+    const cur = _navCur;
+    if(cur==="prog" && typeof renderProgramacion==="function") renderProgramacion();
+    else if(cur==="app" && typeof renderWeek==="function") renderWeek();
+    else if((cur==="conta"||cur==="conta-validar") && typeof renderContabilidad==="function") renderContabilidad();
+    else if((cur==="bancos"||cur==="conta-bancos") && typeof renderBancos==="function") renderBancos();
+    else if(cur==="musico" && typeof renderMusicoReport==="function") renderMusicoReport();
+  }catch(e){}
 }
 el("btnVerify").onclick=verifyCloud;
 
@@ -3823,6 +3918,26 @@ el("goProgramacion").onclick=showProgramacion;
    ============================================================ */
 
 initApp();
+
+/* Avisar si intenta cerrar con datos aún sin subir a la nube */
+window.addEventListener("beforeunload", (e)=>{
+  if(!window.db) return;
+  const nPend=Object.keys(pendGetM()).length+Object.keys(pendGetW()).length;
+  if(nPend>0){
+    e.preventDefault();
+    e.returnValue="";  /* algunos navegadores muestran un aviso genérico */
+    return "";
+  }
+});
+
+/* Cuando vuelve el internet, reintentar subir todo lo pendiente automáticamente */
+window.addEventListener("online", ()=>{
+  if(window.db){
+    flushPending();
+    try{ updateDbIndicator("checking"); }catch(e){}
+    syncCloudInBackground();
+  }
+});
 </script>
 
 <div id="dbIndicator" title="Estado de conexión"><span class="db-tooltip">Verificando conexión…</span></div>
