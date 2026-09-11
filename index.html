@@ -610,7 +610,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
-      <div class="app-version">v3.24 · Orquesta Matriarca</div>
+      <div class="app-version">v3.25 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -2744,10 +2744,16 @@ function computeContaPagos(weekMonday){
     const ex = (wk.extra&&wk.extra[id]) ? wk.extra[id] : {bono:0,desc:0};
     /* incluir si fue enviado a aprobación, haya sido aprobado o no (contabilidad ve todos los enviados) */
     if(!ex.sent) return;
-    const total = acc[id].base + (ex.bono||0) - (ex.desc||0);
+    const subtotal = acc[id].base;
+    const bono = ex.bono||0;
+    const desc = ex.desc||0;
+    const total = subtotal + bono - desc;
     result.push({
       id,
       m,
+      subtotal,
+      bono,
+      desc,
       total,
       pagado: !!(ex.contaPagado),
       pagadoAt: ex.contaPagadoAt||null,
@@ -3258,7 +3264,7 @@ function generarReporteImagen(){
   const totalGen = lista.reduce((s,x)=>s+x.total,0);
   const nPagados = lista.filter(x=>x.pagado).length;
 
-  /* Construir HTML del reporte */
+  /* Construir HTML del reporte — detalle completo: subtotal, bono, descuento y total */
   const filas = lista.map(item=>{
     const ex=(wk.extra&&wk.extra[item.id])||{};
     const estado = item.pagado
@@ -3266,15 +3272,22 @@ function generarReporteImagen(){
       : `<span style="color:#C2832A;font-weight:700">⏳ Pendiente</span>`;
     const wa = ex.waSent
       ? `<span style="color:#25D366;font-size:11px;font-weight:600">📱 WA enviado</span>` : '';
+    const bonoTxt = item.bono>0 ? `+${cop(item.bono)}` : `${cop(0)}`;
+    const descTxt = item.desc>0 ? `-${cop(item.desc)}` : `${cop(0)}`;
     return `<tr style="border-bottom:1px solid #e7e4da">
-      <td style="padding:10px 12px;font-weight:700;color:#1A1B1E">${esc(item.m.alias||item.m.nombre)}</td>
-      <td style="padding:10px 12px;font-size:12px;color:#73757E">${esc(item.m.banco||'—')} · ${esc(item.m.cuenta||'—')}</td>
+      <td style="padding:10px 12px">
+        <div style="font-weight:700;color:#1A1B1E">${esc(item.m.alias||item.m.nombre)}</div>
+        <div style="font-size:11px;color:#9A9CA6">${esc(item.m.banco||'—')} · ${esc(item.m.cuenta||'—')}</div>
+      </td>
+      <td style="padding:10px 12px;font-weight:600;color:#1A1B1E;text-align:right">${cop(item.subtotal)}</td>
+      <td style="padding:10px 12px;font-weight:700;text-align:right;color:${item.bono>0?'#3E8E6E':'#9A9CA6'}">${bonoTxt}</td>
+      <td style="padding:10px 12px;font-weight:700;text-align:right;color:${item.desc>0?'#B0442E':'#9A9CA6'}">${descTxt}</td>
       <td style="padding:10px 12px;font-weight:800;color:#C2832A;text-align:right">${cop(item.total)}</td>
       <td style="padding:10px 12px;text-align:center">${estado}<br>${wa}</td>
     </tr>`;
   }).join("");
 
-  const html = `<div style="font-family:-apple-system,system-ui,sans-serif;background:#F5F3EC;padding:28px;min-width:600px">
+  const html = `<div style="font-family:-apple-system,system-ui,sans-serif;background:#F5F3EC;padding:28px;min-width:760px">
     <div style="text-align:center;margin-bottom:20px">
       <div style="font-size:11px;font-weight:800;letter-spacing:.15em;color:#73757E;text-transform:uppercase">ORQUESTA MATRIARCA</div>
       <div style="font-size:28px;font-weight:900;color:#1A1B1E;margin:4px 0">REPORTE DE PAGOS</div>
@@ -3284,8 +3297,10 @@ function generarReporteImagen(){
       <thead>
         <tr style="background:#1A1B1E;color:#fff">
           <th style="padding:12px;text-align:left;font-size:12px;letter-spacing:.06em">MÚSICO</th>
-          <th style="padding:12px;text-align:left;font-size:12px;letter-spacing:.06em">BANCO / CUENTA</th>
-          <th style="padding:12px;text-align:right;font-size:12px;letter-spacing:.06em">MONTO</th>
+          <th style="padding:12px;text-align:right;font-size:12px;letter-spacing:.06em">SUBTOTAL</th>
+          <th style="padding:12px;text-align:right;font-size:12px;letter-spacing:.06em">BONO</th>
+          <th style="padding:12px;text-align:right;font-size:12px;letter-spacing:.06em">DESCUENTO</th>
+          <th style="padding:12px;text-align:right;font-size:12px;letter-spacing:.06em">TOTAL</th>
           <th style="padding:12px;text-align:center;font-size:12px;letter-spacing:.06em">ESTADO</th>
         </tr>
       </thead>
