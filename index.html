@@ -610,7 +610,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
-      <div class="app-version">v3.23 · Orquesta Matriarca</div>
+      <div class="app-version">v3.24 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -803,6 +803,7 @@
         <button onclick="marcarSemanaCompletaPagada()" style="background:#C0473B;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;letter-spacing:.03em;margin-bottom:8px;width:100%">⚡ MARCAR TODO COMO PAGADO + WA + BLOQUEAR</button>
         <button class="btn btn-primary" id="contaWABloque" style="background:#25D366;color:#fff" onclick="enviarWABloque()">📱 WhatsApp a pagados</button>
         <button class="btn btn-primary" id="contaReporte" style="background:var(--ink);color:#fff" onclick="generarReporteImagen()">📄 Guardar reporte</button>
+        <button class="btn btn-primary" id="contaReporteDesc" style="background:#B0442E;color:#fff" onclick="generarReporteDescuentos()">➖ Reporte de descuentos</button>
       </div>
       <div id="contaBloqueoBar" style="display:none;margin:10px 0"></div>
       <div class="conta-body" id="contaBody"></div>
@@ -1157,7 +1158,29 @@
     </div>
   </div>
 
+  <!-- Overlay genérico para reportes descargables (pagos / descuentos). No usa window.open: todo ocurre dentro de la app. -->
+  <div class="overlay" id="docReportOverlay" style="align-items:center">
+    <div class="modal" style="max-width:640px;width:100%">
+      <div class="modal-head">
+        <h2 id="docReportTitle">Reporte</h2>
+        <button class="icon-btn" id="docReportClose" aria-label="Cerrar" onclick="closeDocReport()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="modal-body" style="padding:0;background:#EDEAE0;max-height:70vh;overflow:auto">
+        <div id="docReportCanvas"></div>
+      </div>
+      <div class="modal-foot">
+        <div id="docReportErr" style="font-size:12px;color:#B0442E;margin-right:auto"></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost" onclick="closeDocReport()">Cerrar</button>
+          <button class="btn btn-primary" id="docReportDownloadBtn" onclick="downloadDocReport()">⬇ Descargar imagen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
+<!-- html2canvas: permite generar la imagen del reporte SIN salir de la app -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <!-- Firebase ACTIVO -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -3169,6 +3192,51 @@ function openUserEditorConta(){
 }
 
 /* ── Generar reporte como imagen descargable ── */
+/* ============================================================
+   SISTEMA DE REPORTES DESCARGABLES (EN LA MISMA APP)
+   No usa window.open (eso hacía que la app se cerrara en móviles).
+   Todo ocurre dentro de un overlay de la propia página; la imagen
+   se genera con html2canvas y se descarga con un enlace normal.
+   ============================================================ */
+let _docReportFilename = "reporte.png";
+
+function openDocReport(title, innerHtml, filename){
+  _docReportFilename = filename || "reporte.png";
+  el("docReportTitle").textContent = title;
+  el("docReportCanvas").innerHTML = innerHtml;
+  el("docReportErr").textContent = "";
+  el("docReportOverlay").classList.add("open");
+}
+function closeDocReport(){
+  el("docReportOverlay").classList.remove("open");
+  el("docReportCanvas").innerHTML = "";
+}
+function downloadDocReport(){
+  const node = el("docReportCanvas").firstElementChild;
+  const errBox = el("docReportErr");
+  if(!node){ return; }
+  if(typeof html2canvas !== "function"){
+    errBox.textContent = "No se pudo cargar el generador de imagen (revisa tu conexión) — puedes hacer captura de pantalla como alternativa.";
+    return;
+  }
+  errBox.textContent = "Generando imagen…";
+  html2canvas(node, {backgroundColor:"#F5F3EC", scale:2}).then(canvas=>{
+    canvas.toBlob(blob=>{
+      if(!blob){ errBox.textContent = "No se pudo generar la imagen."; return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = _docReportFilename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 4000);
+      errBox.textContent = "";
+      toast("✓ Imagen descargada");
+    });
+  }).catch(()=>{
+    errBox.textContent = "No se pudo generar la imagen — puedes hacer captura de pantalla como alternativa.";
+  });
+}
+
+/* ── Reporte de pagos (dentro de la app, ya no abre ventana nueva) ── */
 function generarReporteImagen(){
   const lista = computeContaPagos();
   if(!lista.length){ toast("No hay pagos para generar reporte"); return; }
@@ -3229,19 +3297,61 @@ function generarReporteImagen(){
     </div>
   </div>`;
 
-  /* Abrir en nueva ventana para que el usuario lo guarde/imprima como imagen o PDF */
-  const win = window.open('','_blank');
-  if(!win){ toast("Activa las ventanas emergentes para guardar el reporte"); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte Contabilidad</title>
-    <style>*{box-sizing:border-box}body{margin:0;background:#F5F3EC}
-    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-    </style></head><body>${html}
-    <div style="text-align:center;padding:16px;font-size:12px;color:#73757E">
-      Toca <b>Compartir → Imprimir</b> para guardar como PDF, o mantén presionada la pantalla para guardar como imagen.
+  openDocReport("Reporte de pagos", html, `pagos-${keyOf(contaWeekMonday)}.png`);
+}
+
+/* ── Reporte de descuentos: nombre + valor de descuento de cada músico con descuento en la semana activa ── */
+function computeDescuentos(weekMonday){
+  const mon = weekMonday || contaWeekMonday;
+  const k = keyOf(mon);
+  const wk = weeks[k];
+  if(!wk || !wk.extra) return [];
+  const result=[];
+  Object.keys(wk.extra).map(Number).forEach(id=>{
+    const ex = wk.extra[id];
+    if(!ex || !ex.desc || ex.desc<=0) return;
+    const m = data.find(x=>x.id===id); if(!m) return;
+    result.push({ id, m, desc: ex.desc });
+  });
+  result.sort((a,b)=>(a.m.alias||"").localeCompare(b.m.alias||""));
+  return result;
+}
+
+function generarReporteDescuentos(){
+  const lista = computeDescuentos();
+  if(!lista.length){ toast("No hay descuentos registrados esta semana"); return; }
+
+  const sun7 = addDays(contaWeekMonday,6);
+  const semanaStr = cap(fmt(contaWeekMonday,{day:'numeric',month:'long'})) + " — " + fmt(sun7,{day:'numeric',month:'short',year:'numeric'});
+  const totalDesc = lista.reduce((s,x)=>s+x.desc,0);
+
+  const filas = lista.map(item=>`<tr style="border-bottom:1px solid #e7e4da">
+      <td style="padding:10px 12px;font-weight:700;color:#1A1B1E">${esc(item.m.alias||item.m.nombre)}</td>
+      <td style="padding:10px 12px;font-weight:800;color:#B0442E;text-align:right">-${cop(item.desc)}</td>
+    </tr>`).join("");
+
+  const html = `<div style="font-family:-apple-system,system-ui,sans-serif;background:#F5F3EC;padding:28px;min-width:480px">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.15em;color:#73757E;text-transform:uppercase">ORQUESTA MATRIARCA</div>
+      <div style="font-size:28px;font-weight:900;color:#1A1B1E;margin:4px 0">REPORTE DE DESCUENTOS</div>
+      <div style="font-size:13px;color:#73757E;font-weight:600">${semanaStr}</div>
     </div>
-    <script>setTimeout(()=>window.print(),400)<\/script>
-    </body></html>`);
-  win.document.close();
+    <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(20,21,26,.06)">
+      <thead>
+        <tr style="background:#1A1B1E;color:#fff">
+          <th style="padding:12px;text-align:left;font-size:12px;letter-spacing:.06em">MÚSICO</th>
+          <th style="padding:12px;text-align:right;font-size:12px;letter-spacing:.06em">DESCUENTO</th>
+        </tr>
+      </thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#1A1B1E;color:#fff;border-radius:12px;padding:16px 20px;margin-top:14px">
+      <div style="font-size:13px;color:#9A9CA6">${lista.length} músico${lista.length===1?'':'s'} con descuento · Generado ${new Date().toLocaleString('es-CO')}</div>
+      <div style="font-size:22px;font-weight:900;color:#B0442E">-${cop(totalDesc)}</div>
+    </div>
+  </div>`;
+
+  openDocReport("Reporte de descuentos", html, `descuentos-${keyOf(contaWeekMonday)}.png`);
 }
 
 /* ============ FIN MÓDULO CONTABILIDAD ============ */
