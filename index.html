@@ -77,6 +77,8 @@
   .mc-txt b{font-size:17px;font-weight:700}
   .mc-txt small{color:#a79b78;font-size:12.5px}
   .mc-arrow{font-size:26px;color:#C9A24B;font-weight:300}
+  .mc-badge{display:none;background:#C0473B;color:#fff;font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;margin-left:8px;white-space:nowrap;letter-spacing:.02em}
+  .mc-badge.show{display:inline-block}
   .home-lock{margin-top:24px;background:none;border:none;color:#8a7f63;font-family:inherit;font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
   .home-lock:hover{color:#C9A24B}
   /* Los botones de cerrar sesión por pantalla se ocultan — la barra global los reemplaza */
@@ -610,7 +612,7 @@
       <div class="login-err" id="loginErr"></div>
       <button class="btn-enter" id="btnEnter">Entrar</button>
       <button type="button" class="login-changepwd" id="btnOpenChangePwd">Cambiar mi contraseña</button>
-      <div class="app-version">v3.25 · Orquesta Matriarca</div>
+      <div class="app-version">v3.26 · Orquesta Matriarca</div>
     </div>
   </section>
 
@@ -699,6 +701,7 @@
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
             </span>
             <span class="mc-txt"><b>Reporte de pagos</b><small>Los días que tocaste y tu pago de la semana</small></span>
+            <span class="mc-badge" id="miReporteBadge"></span>
             <span class="mc-arrow">›</span>
           </button>
           <button class="menu-card" id="goProgramacion">
@@ -2146,6 +2149,7 @@ function aprobarMiPago(){
   persistW();
   pushWeekCloud(k);
   renderMusicoReport();
+  updateMiReporteBadge();
   toast("✓ Pago aprobado");
 }
 function musDetailHtml(id){
@@ -2259,8 +2263,8 @@ el("musNext").onclick=()=>{curMonday=addDays(curMonday,7);renderMusicoReport();}
 el("musToday").onclick=()=>{curMonday=mondayOf(new Date());renderMusicoReport();};
 el("musLogout").onclick=logout;
 el("goMiReporte").onclick=()=>{
-  if(currentUser&&currentUser.rol==="musico"){activeMusicoId=currentUser.musicoId;curMonday=mondayOf(new Date());renderMusicoReport();showScreen("musico");}
-  else pickMusico(id=>{activeMusicoId=id;curMonday=mondayOf(new Date());renderMusicoReport();showScreen("musico");});
+  if(currentUser&&currentUser.rol==="musico"){activeMusicoId=currentUser.musicoId;curMonday=bestMusicianWeek(activeMusicoId);renderMusicoReport();showScreen("musico");}
+  else pickMusico(id=>{activeMusicoId=id;curMonday=bestMusicianWeek(id);renderMusicoReport();showScreen("musico");});
 };
 el("goMisDatos").onclick=()=>{
   if(currentUser&&currentUser.rol==="musico"){activeMusicoId=currentUser.musicoId;openMisDatos();}
@@ -2363,6 +2367,7 @@ function applyRole(){
   const isAdmin = currentUser && currentUser.rol === "admin";
   const indBtn = el("goIndicadores");
   if(indBtn) indBtn.style.display = isAdmin ? "flex" : "none";
+  updateMiReporteBadge();
 }
 function entrar(){
   const uRaw=el("usr").value.trim();
@@ -2596,6 +2601,49 @@ function saveMisDatos(){
   toast("✅ Datos guardados");
   fsSync(upd);
 }
+/* ── Encontrar la semana correcta a mostrarle a un músico ──
+   Problema resuelto: antes la app siempre mostraba "la semana de hoy" al
+   entrar a "Mi reporte". Si el admin liquidó/envió el pago de una semana
+   pasada, el músico no lo veía a menos que navegara manualmente con las
+   flechas. Ahora se busca automáticamente la semana con un pago enviado
+   y aún sin aprobar/pagar, y se abre ahí directamente. */
+function pendingApprovalWeeks(musicoId){
+  const out=[];
+  Object.keys(weeks).forEach(k=>{
+    const wk=weeks[k];
+    if(!wk||!wk.extra) return;
+    const ex=wk.extra[musicoId];
+    if(ex && ex.sent && !ex.musOk && !ex.contaPagado) out.push(k);
+  });
+  out.sort(); /* las claves YYYY-MM-DD ordenan cronológicamente como texto */
+  return out;
+}
+function bestMusicianWeek(musicoId){
+  const hoyMonday = mondayOf(new Date());
+  const pending = pendingApprovalWeeks(musicoId);
+  if(!pending.length) return hoyMonday;
+  if(pending.includes(keyOf(hoyMonday))) return hoyMonday; /* ya está pendiente en la semana actual */
+  /* usar la más reciente semana pendiente (última del arreglo ordenado) */
+  const [y,mo,d] = pending[pending.length-1].split('-').map(Number);
+  return mondayOf(new Date(y,mo-1,d));
+}
+/* Muestra en el menú de Inicio un aviso si el músico tiene pagos pendientes de aprobar,
+   aunque no sean de la semana actual — así no se le pasa por alto. */
+function updateMiReporteBadge(){
+  const badge = el("miReporteBadge");
+  if(!badge) return;
+  if(!currentUser || currentUser.rol!=="musico" || !currentUser.musicoId){
+    badge.classList.remove("show"); badge.textContent=""; return;
+  }
+  const n = pendingApprovalWeeks(currentUser.musicoId).length;
+  if(n>0){
+    badge.textContent = n===1 ? "1 pago por aprobar" : n+" pagos por aprobar";
+    badge.classList.add("show");
+  } else {
+    badge.classList.remove("show"); badge.textContent="";
+  }
+}
+
 function renderMusicoReport(){
   const m=data.find(x=>x.id===activeMusicoId);
   if(!m){ if(currentUser&&currentUser.rol==="musico")logout(); return; }
@@ -2659,7 +2707,24 @@ function renderMusicoReport(){
         ? 'El administrador te envió tu pago para que lo revises. Si todo está bien, confírmalo.'
         : 'Pendiente de aprobación del músico. Si ya dio el visto bueno, puedes registrarlo aquí.'}</p><button class="ma-btn" onclick="aprobarMiPago()">${soyMusico?'Aprobar mi pago ✓':'Aprobar a nombre del músico ✓'}</button></div>`;
   }
+  /* Aviso si hay OTRAS semanas (distintas a la que se está viendo) con pago enviado y aún sin aprobar/pagar */
+  const otherPending = pendingApprovalWeeks(m.id).filter(k=>k!==keyOf(curMonday));
+  if(otherPending.length){
+    const btns = otherPending.map(k=>{
+      const [y,mo,d]=k.split('-').map(Number);
+      const mon=mondayOf(new Date(y,mo-1,d));
+      const s7=addDays(mon,6);
+      const label=cap(fmt(mon,{day:'numeric',month:'short'}))+' – '+fmt(s7,{day:'numeric',month:'short'});
+      return `<button class="ma-btn" style="background:#C2832A;margin-top:8px" onclick="irASemanaMusico('${k}')">Ver semana ${esc(label)}</button>`;
+    }).join("");
+    apHtml += `<div class="ma-pending" style="margin-top:10px"><p>⚠ Tienes ${otherPending.length} semana${otherPending.length===1?'':'s'} más con pago pendiente de aprobar:</p>${btns}</div>`;
+  }
   el("musApprove").innerHTML=apHtml;
+}
+function irASemanaMusico(kkey){
+  const [y,mo,d]=kkey.split('-').map(Number);
+  curMonday=mondayOf(new Date(y,mo-1,d));
+  renderMusicoReport();
 }
 function logout(){ currentUser=null; document.body.dataset.rol=""; showScreen("login"); }
 function abrirModulo(view){
@@ -3571,6 +3636,7 @@ async function syncCloudInBackground(){
       weeks = mergeWeeks(freshW, weeks);
       lsSaveW();
       refreshActiveWeekView();
+      updateMiReporteBadge();
     }
   }catch(e){}
   try{ await loadContaCreds(); }catch(e){}
